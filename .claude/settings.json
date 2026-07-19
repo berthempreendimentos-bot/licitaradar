@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:dadosabertos.compras.gov.br)",
+      "Bash(curl -s \"https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=1&codigoModalidade=5&dataPublicacaoPncpInicial=2026-07-01&dataPublicacaoPncpFinal=2026-07-13\" -H \"Accept: application/json\")",
+      "Bash(curl -s \"https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=10&codigoModalidade=5&dataPublicacaoPncpInicial=2026-07-01&dataPublicacaoPncpFinal=2026-07-13\" -H \"Accept: application/json\")",
+      "Bash(npm install *)",
+      "Bash(curl -s \"https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=500&codigoModalidade=5&unidadeOrgaoCodigoUnidade=925538&dataPublicacaoPncpInicial=2023-07-13&dataPublicacaoPncpFinal=2026-07-13\")",
+      "Bash(taskkill //PID 6060 //F)",
+      "Bash(curl -s \"http://localhost:3001/api/buscar?uasg=925538&pregao=90067/2026\")",
+      "Bash(curl -s \"http://localhost:3001/api/buscar\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/)",
+      "Read(//c/Users/flord/AppData/Local/Temp/claude/**)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(ls \"/c/Users/flord/AppData/Local/Temp/claude/c--Projeto-IntegraGO-integracao/96a90474-9635-49f4-8893-bb3885537308/scratchpad/pw/node_modules/.bin\" 2>/dev/null | head; ls \"/c/Users/flord/AppData/Local/Temp/claude/c--Projeto-IntegraGO-integracao/96a90474-9635-49f4-8893-bb3885537308/scratchpad/pw\" 2>/dev/null)",
+      "Read(//c/Users/flord/AppData/Local/Temp/claude/c--Projeto-IntegraGO-integracao/96a90474-9635-49f4-8893-bb3885537308/scratchpad/pw/**)",
+      "Bash(PW_DIR=\"/c/Users/flord/AppData/Local/Temp/claude/c--Projeto-IntegraGO-integracao/96a90474-9635-49f4-8893-bb3885537308/scratchpad/pw\" *)",
+      "Bash(python3 -c ' *)",
+      "Bash(sleep 3; cat /tmp/open_visible.log 2>&1)",
+      "Read(//tmp/**)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(taskkill //IM chrome.exe //FI \"WINDOWTITLE eq Compras.gov.br*\" //F)",
+      "Bash(cat /tmp/type_url.log)",
+      "PowerShell(Get-Process chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object Id, MainWindowTitle)",
+      "Bash(taskkill //IM chrome.exe //F)",
+      "Bash(curl -s \"http://localhost:3001/api/buscar?uasg=154046&pregao=90008/2025\")",
+      "Bash(cat /tmp/server.log)",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('/c/Projeto/comprasnet/server/node_modules/@prisma/adapter-better-sqlite3'\\)\\)\\)\")",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('@prisma/adapter-better-sqlite3'\\)\\)\\)\")",
+      "Bash(curl -s \"http://localhost:3001/api/buscar?uasg=090023&pregao=900022026\")",
+      "Bash(curl -s http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/)",
+      "Bash(curl -s \"http://localhost:3001/api/buscar?uasg=154046&pregao=900082025\")",
+      "Bash(psql --version)",
+      "Bash(mkdir -p /c/Users/flord/AppData/Local/Temp/claude/c--Projeto-comprasnet/d5ecfabf-3118-4372-856c-4952b8a2ff3d/scratchpad/pgrun)",
+      "Read(//c/Users/flord/AppData/Local/Temp/claude/c--Projeto-comprasnet/d5ecfabf-3118-4372-856c-4952b8a2ff3d/scratchpad/**)",
+      "Bash(npm init *)",
+      "Read(//c/Users/flord/AppData/Local/Temp/claude/c--Projeto-comprasnet/d5ecfabf-3118-4372-856c-4952b8a2ff3d/scratchpad/pgrun/**)",
+      "Bash(export PG_CONN=\"postgresql://postgres:Tff6sStJygnxncde@db.rwvsqjewevgyzlnjasvp.supabase.co:5432/postgres\")",
+      "Bash(node run.js /c/Projeto/comprasnet/server/supabase-schema.sql)",
+      "Bash(curl -s -X POST http://localhost:3001/api/monitorar -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(cat)",
+      "Bash(node verify2.js)",
+      "Bash(curl -s -X POST http://localhost:3001/api/monitorar -H \"Content-Type: application/json\" --data-binary @/tmp/item.json)",
+      "Bash(cat /tmp/inspect_msgs.log)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\flord\\AppData\\Local\\Temp\\claude\\c--Projeto-IntegraGO-integracao\\96a90474-9635-49f4-8893-bb3885537308\\scratchpad\\pw"
+    ]
+  }
+}

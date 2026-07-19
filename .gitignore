@@ -1,0 +1,37 @@
+# Dependências
+node_modules/
+
+# Segredos / configuração local
+server/.env
+server/.chave-local
+server/uploads/
+
+# Bancos de dados locais
+server/dev.db
+*.db
+
+# Prisma
+server/generated/
+generated/
+
+# Perfil de navegador usado pela automação (Playwright/Puppeteer) — não versionar
+bot_profile/
+
+# Artefatos de debug / scraping
+dump.html
+temp_dom.html
+debug_text.txt
+api_urls.txt
+api_urls_utf8.txt
+buttons.txt
+parsed_buttons.txt
+posicao_botao.json
+mensagens_extraidas_*.txt
+tela_mensagens_*.png
+erro-headless.png
+pregao_mensagens.png
+screenshot_erro.png
+
+# Sistema
+.DS_Store
+Thumbs.db

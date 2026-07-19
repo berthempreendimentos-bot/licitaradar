@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login | PEPACORP NOTIFICA</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Hanken+Grotesk:wght@700;800;900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#e5eeff",
+                        "primary-fixed-dim": "#ffb3b6",
+                        "primary-container": "#e11d48",
+                        "on-tertiary-fixed-variant": "#444749",
+                        "surface": "#f8f9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#920028",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#5c647a",
+                        "primary-fixed": "#ffdada",
+                        "primary": "#b80035",
+                        "secondary-container": "#dae2fd",
+                        "on-primary-container": "#fffaf9",
+                        "surface-container-high": "#dce9ff",
+                        "surface-tint": "#be0037",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#ffb3b6",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary-container": "#717476",
+                        "secondary": "#565e74",
+                        "on-background": "#0b1c30",
+                        "inverse-surface": "#213145",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary": "#585c5d",
+                        "on-surface-variant": "#5c3f40",
+                        "secondary-fixed": "#dae2fd",
+                        "on-tertiary-fixed": "#191c1e",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-tertiary-container": "#f9fbfd",
+                        "outline-variant": "#e5bdbe",
+                        "on-primary-fixed": "#40000c",
+                        "outline": "#906f70",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#e0e3e5",
+                        "on-surface": "#0b1c30",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#cbdbf5",
+                        "on-secondary-fixed": "#131b2e",
+                        "background": "#f8f9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#c4c7c9",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container-low": "#eff4ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section-gap": "48px",
+                        "container-padding-desktop": "80px",
+                        "base": "8px",
+                        "input-padding": "16px",
+                        "gutter": "24px",
+                        "container-padding-mobile": "24px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "button-text": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-xl": ["Hanken Grotesk"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", { "lineHeight": "1.0", "letterSpacing": "0.08em", "fontWeight": "700" }],
+                        "button-text": ["14px", { "lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-xl": ["56px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+        }
+        .left-panel {
+            width: 50%;
+            position: relative;
+            background-color: #0b1c30;
+            overflow: hidden;
+        }
+        .right-panel {
+            width: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffffff;
+            padding: 80px;
+        }
+        .input-field-custom {
+            background-color: #f8f9ff;
+            border: 1px solid #d3e4fe;
+            transition: all 0.2s ease;
+        }
+        .input-field-custom:focus {
+            background-color: #ffffff;
+            border-color: #e11d48;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.1);
+        }
+        @media (max-width: 1024px) {
+            .left-panel { display: none; }
+            .right-panel { width: 100%; padding: 24px; }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased">
+<main class="auth-container">
+<!-- Left Panel: Narrative & Branding -->
+<section class="left-panel flex flex-col justify-between p-container-padding-desktop">
+<!-- Background Image with Overlay -->
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-t from-on-background via-on-background/60 to-on-background/20 z-10"></div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-[20000ms] hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCBZIsi-NiBj2kLxu5BDMj1-67qpvMEoMd6fFp-uAQ2yUd0aCOVCbekbXUKAGMr2Cxq3Dv_QFpduJ72y31DyoFnAtaBc93zcO-Cz66JAWuHPCDFl3eles5VbENy6wViLBotrOvTYq0neJAMlVnC52NA4DOnTDG1IGVX0OTxjFgYm9u6JRFBzcmXWfudQ3t3fsGiD8qEH9a8crLQ7Mh8dXY2HuVnAsU67QTQCRaT9MLFd7OIkgq7lLlhXA')">
+</div>
+</div>
+<!-- Content -->
+<div class="relative z-20">
+<div class="mb-12">
+<span class="font-headline-lg text-headline-lg font-extrabold text-white tracking-tighter">PEPACORP</span>
+<span class="font-headline-lg text-headline-lg font-light text-primary-container tracking-tighter">NOTIFICA</span>
+</div>
+</div>
+<div class="relative z-20">
+<h1 class="font-headline-xl text-[48px] leading-[1.1] text-white mb-6 max-w-xl font-black">
+                    DOMINE O MERCADO DE LICITAÇÕES COM <span class="text-primary-container">INTELIGÊNCIA E PRECISÃO.</span>
+</h1>
+<p class="font-body-md text-body-md text-slate-200 max-w-md mb-8 leading-relaxed">
+                    A plataforma definitiva da PEPACORP para monitoramento estratégico e gestão de editais em tempo real.
+                </p>
+<div class="flex gap-4 items-center">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-on-background bg-slate-700"></div>
+<div class="w-8 h-8 rounded-full border-2 border-on-background bg-slate-600"></div>
+<div class="w-8 h-8 rounded-full border-2 border-on-background bg-slate-500"></div>
+</div>
+<span class="text-xs font-bold text-white uppercase tracking-widest">Enterprise Verified</span>
+</div>
+</div>
+<div class="relative z-20 text-slate-400 font-label-caps text-label-caps flex gap-6">
+<span>© 2024 PEPACORP</span>
+<span>SECURITY PROTOCOL 7.4.1</span>
+</div>
+</section>
+<!-- Right Panel: Login Utility -->
+<section class="right-panel">
+<div class="w-full max-w-md">
+<div class="mb-12">
+<div class="lg:hidden mb-8">
+<span class="font-headline-lg text-headline-lg-mobile font-extrabold text-on-background tracking-tighter">PEPACORP</span>
+<span class="font-headline-lg text-headline-lg-mobile font-light text-primary-container tracking-tighter">NOTIFICA</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Acesso Interno</h2>
+<p class="font-body-md text-body-md text-on-secondary-container">Insira suas credenciais para acessar o painel de controle.</p>
+</div>
+<form class="space-y-6" onsubmit="event.preventDefault();">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block uppercase" for="email">E-mail Corporativo</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-secondary-container text-sm">mail</span>
+<input class="input-field-custom w-full h-14 pl-12 pr-4 font-body-md text-body-md rounded-none" id="email" name="email" placeholder="nome@pepacorp.com" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="font-label-caps text-label-caps text-on-surface-variant block uppercase" for="password">Chave de Acesso</label>
+<a class="font-label-caps text-label-caps text-primary-container hover:underline uppercase" href="#">Esqueceu?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-secondary-container text-sm">lock</span>
+<input class="input-field-custom w-full h-14 pl-12 pr-12 font-body-md text-body-md rounded-none" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-on-secondary-container" type="button">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center space-x-2">
+<input class="w-4 h-4 text-primary-container border-outline-variant focus:ring-primary-container" id="remember" type="checkbox"/>
+<label class="font-body-sm text-body-sm text-on-secondary-container" for="remember">Manter autenticado por 8 horas</label>
+</div>
+<button class="w-full h-14 bg-on-background text-white font-button-text text-button-text uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary-container transition-all group">
+                        AUTORIZAR SESSÃO
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<div class="relative py-4">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant"></div>
+</div>
+<div class="relative flex justify-center text-xs uppercase">
+<span class="bg-white px-4 text-on-secondary-container font-label-caps tracking-widest">Provedores de Identidade</span>
+</div>
+</div>
+<button class="w-full h-14 border border-outline text-on-surface font-button-text text-button-text uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-surface-container-low transition-colors">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.67l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+                        Entrar com SSO
+                    </button>
+</form>
+<!-- Security Badges -->
+<div class="mt-16 pt-8 border-t border-outline-variant flex justify-between items-center opacity-60 grayscale hover:grayscale-0 transition-all">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl">verified_user</span>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] uppercase leading-none text-on-surface-variant">Security Standard</span>
+<span class="font-bold text-[10px]">SOC2 TYPE II</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl">encrypted</span>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] uppercase leading-none text-on-surface-variant">Encryption</span>
+<span class="font-bold text-[10px]">AES-256 BIT</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl">shield</span>
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] uppercase leading-none text-on-surface-variant">Protection</span>
+<span class="font-bold text-[10px]">ISO 27001</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Ambient Micro-interaction Script -->
+<script>
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            const leftPanel = document.querySelector('.left-panel .bg-cover');
+            if (leftPanel) {
+                leftPanel.style.transform = `scale(1.1) translate(${x * 10}px, ${y * 10}px)`;
+            }
+        });
+
+        // Simple validation visualization
+        const inputs = document.querySelectorAll('.input-field-custom');
+        inputs.forEach(input => {
+            input.addEventListener('blur', () => {
+                if (input.value.length > 0) {
+                    input.classList.add('border-primary-container');
+                    input.classList.remove('border-[#d3e4fe]');
+                } else {
+                    input.classList.remove('border-primary-container');
+                    input.classList.add('border-[#d3e4fe]');
+                }
+            });
+        });
+    </script>
+</body></html>

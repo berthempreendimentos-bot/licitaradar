@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Entrar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .auth-shell {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .auth-left {
+    width: 46%;
+    background: var(--dark-panel-bg);
+    color: #fff;
+    padding: 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-left::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(184,0,53,0.35), transparent 55%);
+    pointer-events: none;
+  }
+
+  .auth-brand {
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-brand .brand-name {
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-brand .brand-tagline {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #ffb3b6;
+    margin-top: 4px;
+  }
+
+  .auth-headline {
+    position: relative;
+    z-index: 1;
+    max-width: 460px;
+  }
+
+  .auth-headline h1 {
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 16px;
+  }
+
+  .auth-headline h1 span {
+    color: #ff8a9c;
+  }
+
+  .auth-headline p {
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: #c7cede;
+  }
+
+  .auth-footer {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7c869e;
+    display: flex;
+    gap: 20px;
+  }
+
+  .auth-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 40px;
+  }
+
+  .auth-form-wrap {
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .auth-form-wrap h2 {
+    font-size: 26px;
+    margin: 0 0 8px;
+  }
+
+  .auth-form-wrap .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .auth-field {
+    margin-bottom: 20px;
+  }
+
+  .auth-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .auth-input-wrap {
+    position: relative;
+  }
+
+  .auth-input-wrap .material-symbols-outlined {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 18px;
+  }
+
+  .auth-input-wrap input {
+    padding-left: 42px;
+  }
+
+  .auth-submit {
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 8px;
+    background: var(--dark-panel-bg);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .auth-submit:hover:not(:disabled) {
+    background: var(--accent-solid);
+  }
+
+  .auth-submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .auth-error {
+    margin-top: 16px;
+    font-size: 13.5px;
+    color: var(--danger);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  @media (max-width: 860px) {
+    .auth-left { display: none; }
+    .auth-right { width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="auth-shell">
+    <section class="auth-left">
+      <div class="auth-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <div class="auth-headline">
+        <h1>Acompanhe pregões eletrônicos com <span>inteligência e precisão.</span></h1>
+        <p>Busca, monitoramento e alertas de palavras-chave em tempo real para licitações do Compras.gov.br / ComprasNet.</p>
+      </div>
+      <div class="auth-footer">
+        <span>© 2026 PEPACORP LICITA</span>
+      </div>
+    </section>
+
+    <section class="auth-right">
+      <div class="auth-form-wrap">
+        <h2>Acesso</h2>
+        <p class="subtitle">Entre com suas credenciais para acessar o painel.</p>
+
+        <form id="loginForm">
+          <div class="auth-field">
+            <label for="email">E-mail</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-outlined" aria-hidden="true">mail</span>
+              <input type="email" id="email" class="text-input" placeholder="seu@email.com" autocomplete="username" required>
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="senha">Senha</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+              <input type="password" id="senha" class="text-input" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+          </div>
+
+          <button class="auth-submit" type="submit" id="submitBtn">
+            Entrar
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+          </button>
+
+          <div class="auth-error" id="authError" role="alert"></div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorEl = document.getElementById('authError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+
+      submitBtn.disabled = true;
+      errorEl.textContent = '';
+
+      try {
+        const resp = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha }),
+        });
+        const dados = await resp.json();
+
+        if (!resp.ok) throw new Error(dados.erro || 'Não foi possível entrar.');
+
+        window.location.href = 'index.html';
+      } catch (err) {
+        errorEl.textContent = err.message;
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

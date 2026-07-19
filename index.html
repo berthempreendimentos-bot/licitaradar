@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Buscar Pregão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .search-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 200px;
+  }
+
+  .field label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--label);
+  }
+
+  .search-btn {
+    flex: none;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent-solid);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .search-btn:hover:not(:disabled) {
+    background: var(--accent-solid-hover);
+  }
+
+  .search-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .search-btn:disabled {
+    opacity: 0.65;
+    cursor: default;
+  }
+
+  @media (max-width: 560px) {
+    .search-row { flex-direction: column; align-items: stretch; }
+    /* Em coluna, o eixo principal do flex passa a ser vertical: sem isso,
+       o flex-basis de 200px de .field vira altura mínima e infla o layout. */
+    .field { flex: none; }
+    .search-btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+    <div class="page">
+    <form class="card" id="searchForm">
+      <div class="search-row">
+        <div class="field">
+          <label for="uasg">Órgão (Uasg): <button type="button" class="help" data-tip="Código UASG do órgão" aria-label="Ajuda: Código UASG do órgão">?</button></label>
+          <input type="text" id="uasg" name="uasg" class="text-input" placeholder="Ex.: 925010" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="pregao">Licitação (Pregão): <button type="button" class="help" data-tip="Número do pregão eletrônico" aria-label="Ajuda: Número do pregão eletrônico">?</button></label>
+          <input type="text" id="pregao" name="pregao" class="text-input" placeholder="Ex.: 90001/2026" autocomplete="off">
+        </div>
+
+        <button class="search-btn" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          Buscar
+        </button>
+      </div>
+
+      <div class="status-msg" id="statusMsg" role="status" aria-live="polite">Informe o Uasg do órgão e clique em Buscar para localizar pregões eletrônicos.</div>
+      <div class="results" id="results"></div>
+    </form>
+    </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      label.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const saved = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    const statusMsg = document.getElementById('statusMsg');
+    const resultsEl = document.getElementById('results');
+    const submitBtn = document.querySelector('.search-btn');
+
+    function formatarMoeda(valor) {
+      if (valor === null || valor === undefined) return '—';
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function renderResultados(itens) {
+      resultsEl.innerHTML = '';
+      itens.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <h3>UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}</h3>
+          <div class="result-meta">
+            <span><strong>Órgão:</strong> ${item.orgao || '—'}</span>
+            <span><strong>Unidade:</strong> ${item.unidade || '—'}</span>
+            <span><strong>UF:</strong> ${item.uf || '—'}</span>
+          </div>
+          <div class="result-objeto">${item.objeto || 'Sem descrição do objeto.'}</div>
+          <div class="result-meta">
+            <span class="badge">${item.situacao || 'Situação não informada'}</span>
+            <span><strong>Valor estimado:</strong> ${formatarMoeda(item.valorEstimado)}</span>
+            <span><strong>Abertura:</strong> ${formatarData(item.dataAbertura)}</span>
+            <span><strong>Encerramento:</strong> ${formatarData(item.dataEncerramento)}</span>
+          </div>
+          <div class="result-url">
+            Página no ComprasNet:
+            <a class="result-link" href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>
+          </div>
+          <div class="result-actions">
+            <button class="monitor-btn" type="button" ${item.monitorado ? 'disabled' : ''}>Monitorar</button>
+            <span class="monitor-status" role="status" aria-live="polite">${item.monitorado ? 'Já está sendo monitorado ✓' : ''}</span>
+          </div>
+        `;
+
+        const monitorBtn = card.querySelector('.monitor-btn');
+        const monitorStatus = card.querySelector('.monitor-status');
+        monitorBtn.addEventListener('click', async () => {
+          monitorBtn.disabled = true;
+          monitorStatus.textContent = 'Salvando...';
+          monitorStatus.classList.remove('error');
+          try {
+            const resp = await fetch('/api/monitorar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(item),
+            });
+            const dados = await resp.json();
+            if (!resp.ok) throw new Error(dados.erro || 'Falha ao salvar.');
+            monitorStatus.textContent = 'Monitorando ✓';
+          } catch (err) {
+            monitorStatus.classList.add('error');
+            monitorStatus.textContent = err.message;
+            monitorBtn.disabled = false;
+          }
+        });
+
+        resultsEl.appendChild(card);
+      });
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uasg = document.getElementById('uasg').value.trim();
+      const pregao = document.getElementById('pregao').value.trim();
+
+      resultsEl.innerHTML = '';
+
+      if (!uasg) {
+        statusMsg.classList.add('error');
+        statusMsg.textContent = 'Informe o código UASG do órgão para buscar.';
+        document.getElementById('uasg').focus();
+        return;
+      }
+
+      statusMsg.classList.remove('error');
+      statusMsg.innerHTML = '<span class="spinner" aria-hidden="true"></span>Buscando pregões no Compras.gov.br...';
+      submitBtn.disabled = true;
+
+      try {
+        const params = new URLSearchParams({ uasg });
+        if (pregao) params.set('pregao', pregao);
+
+        const resp = await fetch(`/api/buscar?${params.toString()}`);
+        const dados = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(dados.erro || 'Falha ao buscar dados.');
+        }
+
+        if (dados.itens.length === 0) {
+          statusMsg.textContent = 'Nenhum pregão encontrado para os critérios informados.';
+        } else {
+          statusMsg.textContent = `${dados.total} pregão(ões) encontrado(s).`;
+          renderResultados(dados.itens);
+        }
+      } catch (err) {
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

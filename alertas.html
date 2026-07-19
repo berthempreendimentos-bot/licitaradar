@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Alertas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .page.wide {
+    max-width: 1000px;
+  }
+
+  .layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .col-palavras {
+    width: 300px;
+    flex: none;
+  }
+
+  .col-alertas {
+    flex: 1;
+  }
+
+  .palavra-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .palavra-form-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .palavra-form input {
+    flex: 1;
+  }
+
+  .palavra-tipo-select {
+    height: 42px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    padding: 0 10px;
+  }
+
+  .palavra-item .termo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tipo-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .tipo-badge.urgente {
+    color: var(--danger);
+  }
+
+  .palavras-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .palavra-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+
+  .palavra-item button {
+    border: none;
+    background: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .alertas-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .alerta-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+
+  .alerta-card.nao-lido {
+    border-left: 4px solid var(--accent-solid);
+  }
+
+  .alerta-cabecalho {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .alerta-cabecalho strong {
+    color: var(--text);
+  }
+
+  .alerta-mensagem {
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+
+  .alerta-mensagem mark {
+    background: var(--accent-solid);
+    color: #fff;
+    padding: 0 3px;
+    border-radius: 3px;
+  }
+
+  .alerta-acoes {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .alerta-acoes button {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  .filtro-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+
+  @media (max-width: 720px) {
+    .layout { flex-direction: column; }
+    .col-palavras { width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="alertas.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+    <div class="page wide">
+    <div class="layout">
+      <div class="col-palavras card">
+        <h3 style="margin-top:0;">Palavras-chave</h3>
+        <form class="palavra-form" id="palavraForm">
+          <div class="palavra-form-row">
+            <label class="sr-only" for="novaPalavra">Nova palavra-chave</label>
+            <input type="text" id="novaPalavra" class="text-input" placeholder="Ex.: suspensa" autocomplete="off">
+            <button class="monitor-btn" type="submit">+</button>
+          </div>
+          <label class="sr-only" for="tipoNotificacao">Tipo de notificação</label>
+          <select id="tipoNotificacao" class="palavra-tipo-select">
+            <option value="padrao">Padrão (som + visual)</option>
+            <option value="urgente">Urgente (som diferenciado)</option>
+            <option value="silencioso">Silencioso (sem som)</option>
+          </select>
+        </form>
+        <div class="palavras-lista" id="palavrasLista"><p class="empty-msg">Carregando...</p></div>
+      </div>
+
+      <div class="col-alertas card">
+        <h3 style="margin-top:0;">Alertas</h3>
+        <label class="filtro-toggle">
+          <input type="checkbox" id="apenasNaoLidos" checked>
+          Mostrar apenas não lidos
+        </label>
+        <label class="filtro-toggle">
+          <input type="checkbox" id="notificarComputador" checked>
+          Avisar no computador (pop-up)
+        </label>
+        <label class="filtro-toggle">
+          Som do alarme
+          <select id="estiloAlarme" class="palavra-tipo-select" style="height:32px;"></select>
+          <button type="button" id="testarAlarmeBtn" style="margin-left:4px;height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:12px;cursor:pointer;">Testar</button>
+        </label>
+        <div class="status-msg" id="statusMsg" role="status" aria-live="polite"></div>
+        <div class="alertas-lista" id="alertasLista"></div>
+      </div>
+    </div>
+    </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      label.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const saved = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function destacarPalavra(texto, palavra) {
+      if (!texto || !palavra) return texto || '';
+      const re = new RegExp(`(${palavra.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig');
+      return texto.replace(re, '<mark>$1</mark>');
+    }
+
+    // ---------- Palavras-chave ----------
+
+    const palavraForm = document.getElementById('palavraForm');
+    const novaPalavraInput = document.getElementById('novaPalavra');
+    const palavrasListaEl = document.getElementById('palavrasLista');
+
+    async function carregarPalavras() {
+      try {
+        const resp = await fetch('/api/palavras');
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar palavras-chave.');
+
+        if (dados.itens.length === 0) {
+          palavrasListaEl.innerHTML = '<p class="empty-msg">Nenhuma palavra-chave cadastrada.</p>';
+          return;
+        }
+
+        const rotuloTipo = { padrao: 'Padrão', urgente: 'Urgente', silencioso: 'Silencioso' };
+
+        palavrasListaEl.innerHTML = dados.itens
+          .map(
+            (p) => `
+              <div class="palavra-item" data-id="${p.id}">
+                <div class="termo-info">
+                  <span>${p.termo}</span>
+                  <span class="tipo-badge ${p.tipoNotificacao === 'urgente' ? 'urgente' : ''}">${rotuloTipo[p.tipoNotificacao] || 'Padrão'}</span>
+                </div>
+                <button type="button" data-id="${p.id}" title="Remover">✕</button>
+              </div>
+            `
+          )
+          .join('');
+
+        palavrasListaEl.querySelectorAll('button[data-id]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            await fetch(`/api/palavras/${btn.dataset.id}`, { method: 'DELETE' });
+            carregarPalavras();
+          });
+        });
+      } catch (err) {
+        palavrasListaEl.innerHTML = `<p class="empty-msg">${err.message}</p>`;
+      }
+    }
+
+    const tipoNotificacaoSelect = document.getElementById('tipoNotificacao');
+
+    palavraForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const termo = novaPalavraInput.value.trim();
+      if (!termo) return;
+
+      await fetch('/api/palavras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ termo, tipoNotificacao: tipoNotificacaoSelect.value }),
+      });
+      novaPalavraInput.value = '';
+      tipoNotificacaoSelect.value = 'padrao';
+      carregarPalavras();
+    });
+
+    // ---------- Alertas ----------
+
+    const statusMsg = document.getElementById('statusMsg');
+    const alertasListaEl = document.getElementById('alertasLista');
+    const apenasNaoLidosEl = document.getElementById('apenasNaoLidos');
+
+    const notificarComputadorEl = document.getElementById('notificarComputador');
+    const estiloAlarmeEl = document.getElementById('estiloAlarme');
+    const testarAlarmeBtn = document.getElementById('testarAlarmeBtn');
+
+    notificarComputadorEl.checked = window.RadarNotificacoes.preferenciaAtiva();
+
+    notificarComputadorEl.addEventListener('change', () => {
+      window.RadarNotificacoes.definirPreferencia(notificarComputadorEl.checked);
+      if (notificarComputadorEl.checked) {
+        window.RadarNotificacoes.pedirPermissao((msg) => { statusMsg.textContent = msg; });
+      }
+    });
+
+    estiloAlarmeEl.innerHTML = window.RadarNotificacoes.listarEstilosAlarme()
+      .map((e) => `<option value="${e.id}">${e.label}</option>`)
+      .join('');
+    estiloAlarmeEl.value = window.RadarNotificacoes.obterEstiloAlarme();
+
+    estiloAlarmeEl.addEventListener('change', () => {
+      window.RadarNotificacoes.definirEstiloAlarme(estiloAlarmeEl.value);
+    });
+
+    testarAlarmeBtn.addEventListener('click', () => {
+      window.RadarNotificacoes.testarAlarme(estiloAlarmeEl.value);
+    });
+
+    // Entrar nesta tela já conta como "ver o alerta": para qualquer alarme contínuo
+    // que estivesse tocando (disparado em outra aba/página antes de navegar pra cá).
+    window.RadarNotificacoes.pararAlarme();
+
+    // Assim que o servidor grava um novo alerta no banco (ver POST /api/mensagens/:idCompra),
+    // ele chega aqui via SSE (notificacoes.js) e a lista é recarregada na hora.
+    window.RadarNotificacoes.aoReceberAlerta(() => carregarAlertas());
+
+    async function marcarLido(id) {
+      await fetch(`/api/alertas/${id}/marcar-lido`, { method: 'POST' });
+      carregarAlertas();
+    }
+
+    async function carregarAlertas() {
+      try {
+        const params = new URLSearchParams();
+        if (apenasNaoLidosEl.checked) params.set('apenasNaoLidos', 'true');
+
+        const resp = await fetch(`/api/alertas?${params.toString()}`);
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar alertas.');
+
+        statusMsg.textContent = dados.itens.length === 0 ? 'Nenhum alerta encontrado.' : '';
+
+        alertasListaEl.innerHTML = dados.itens
+          .map(
+            (a) => `
+              <div class="alerta-card ${a.lido ? '' : 'nao-lido'}">
+                <div class="alerta-cabecalho">
+                  <span><strong>UASG ${a.uasg}</strong> — Pregão ${a.numeroPregao}/${a.anoPregao} — palavra: <strong>${a.palavraEncontrada}</strong></span>
+                  <span style="display:flex;align-items:center;gap:8px;">
+                    ${a.link ? `<a href="${a.link}" target="_blank" rel="noopener noreferrer" title="Abrir licitação" style="display:inline-flex;color:var(--text);"><span class="material-symbols-outlined" style="font-size:18px;">open_in_new</span></a>` : ''}
+                    ${formatarData(a.criadoEm)}
+                  </span>
+                </div>
+                <div class="alerta-mensagem">${destacarPalavra(a.mensagem, a.palavraEncontrada)}</div>
+                ${!a.lido ? `<div class="alerta-acoes"><button type="button" data-id="${a.id}">Marcar como lido</button></div>` : ''}
+              </div>
+            `
+          )
+          .join('');
+
+        alertasListaEl.querySelectorAll('button[data-id]').forEach((btn) => {
+          btn.addEventListener('click', () => marcarLido(btn.dataset.id));
+        });
+      } catch (err) {
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+      }
+    }
+
+    apenasNaoLidosEl.addEventListener('change', () => carregarAlertas());
+
+    carregarPalavras();
+    carregarAlertas();
+    // Fallback: se a conexão em tempo real cair (ou em ambiente serverless, onde ela
+    // não é mantida entre invocações), o polling periódico ainda garante que a lista atualize.
+    setInterval(() => carregarAlertas(), 30000);
+  </script>
+</body>
+</html>

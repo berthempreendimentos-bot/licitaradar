@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "cookie-session": "^2.1.1",
+    "playwright": "^1.61.1"
+  }
+}

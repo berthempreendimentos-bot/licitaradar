@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Monitoramento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .page.wide {
+    max-width: 1200px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .stat-tile {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+
+  .stat-tile .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-tile .stat-label {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .situacao-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filter-row .text-input {
+    flex: 1;
+  }
+
+  .empty-msg {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .monitor-layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .monitor-list-panel {
+    width: 200px;
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+    overflow: hidden;
+  }
+
+  .monitor-list {
+    max-height: 520px;
+    overflow-y: auto;
+  }
+
+  .monitor-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .monitor-row:last-child {
+    border-bottom: none;
+  }
+
+  .monitor-row:hover {
+    background: var(--bg);
+  }
+
+  .monitor-row.selected {
+    background: var(--bg);
+  }
+
+  .monitor-pill {
+    flex: 1;
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: center;
+    color: #fff;
+    background: var(--accent-solid);
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .monitor-row:hover .monitor-pill {
+    background: var(--accent-solid-hover);
+    transform: translateX(2px);
+  }
+
+  .monitor-pill.status-alerta {
+    background: var(--dark-panel-bg);
+  }
+
+  .monitor-row:hover .monitor-pill.status-alerta {
+    background: #1c2c42;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .pagination button {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  .pagination button.active {
+    background: var(--accent-solid);
+    border-color: var(--accent-solid);
+    color: #fff;
+  }
+
+  .pagination button:focus-visible,
+  .monitor-row:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .pagination button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .monitor-detail {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+    padding: 20px 24px;
+    min-height: 200px;
+  }
+
+  .monitor-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .monitor-detail h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .monitor-detail-orgao {
+    margin: 2px 0 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .monitor-detail-acoes {
+    display: flex;
+    gap: 8px;
+    flex: none;
+  }
+
+  .acao-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .acao-btn .material-symbols-outlined {
+    font-size: 20px;
+  }
+
+  .acao-btn.favoritar:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .acao-btn.favoritar.ativo {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-variation-settings: 'FILL' 1;
+  }
+
+  .acao-btn.favoritar.ativo .material-symbols-outlined {
+    font-variation-settings: 'FILL' 1;
+  }
+
+  .acao-btn.excluir:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .acao-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 20px;
+    margin-bottom: 14px;
+  }
+
+  .detail-field .detail-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .detail-field .detail-value {
+    font-size: 13.5px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .detail-objeto {
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+
+  .stat-tile.wide {
+    grid-column: span 2;
+  }
+
+  @media (max-width: 720px) {
+    .monitor-layout { flex-direction: column; }
+    .monitor-list-panel { width: 100%; }
+    .monitor-list { max-height: 260px; }
+  }
+
+  @media (max-width: 480px) {
+    .stat-tile.wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .mensagens-section {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .mensagens-section h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .mensagens-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+  }
+
+  .mensagem-bolha {
+    background: var(--help-bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .mensagem-cabecalho {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .mensagem-cabecalho .grupo {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .mensagem-texto {
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .mensagem-data {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: right;
+  }
+
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+    <div class="page wide">
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="filter-row">
+      <label class="sr-only" for="filtro">Filtrar pregões monitorados</label>
+      <input type="text" id="filtro" class="text-input" placeholder="Filtrar por órgão, unidade, UASG, pregão ou objeto..." autocomplete="off">
+    </div>
+
+    <div class="status-msg" id="statusMsg" role="status" aria-live="polite"></div>
+
+    <div class="monitor-layout" id="monitorLayout" style="display:none;">
+      <div class="monitor-list-panel">
+        <div class="monitor-list" id="monitorList"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+      <div class="monitor-detail" id="monitorDetail"></div>
+    </div>
+    </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      label.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const saved = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    const statGrid = document.getElementById('statGrid');
+    const statusMsg = document.getElementById('statusMsg');
+    const filtroInput = document.getElementById('filtro');
+    const monitorLayout = document.getElementById('monitorLayout');
+    const monitorListEl = document.getElementById('monitorList');
+    const paginationEl = document.getElementById('pagination');
+    const monitorDetailEl = document.getElementById('monitorDetail');
+
+    const ITENS_POR_PAGINA = 10;
+    const SITUACOES_ALERTA = ['anulad', 'revogad', 'suspens', 'fracassad', 'desert', 'cancelad'];
+
+    let todosItens = [];
+    let itensFiltrados = [];
+    let paginaAtual = 1;
+    let idSelecionado = null;
+
+    function formatarMoeda(valor) {
+      if (valor === null || valor === undefined) return '—';
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function ehAlerta(situacao) {
+      const s = (situacao || '').toLowerCase();
+      return SITUACOES_ALERTA.some((termo) => s.includes(termo));
+    }
+
+    function renderDashboard(itens) {
+      const total = itens.length;
+      const valorTotal = itens.reduce((soma, item) => soma + (Number(item.valorEstimado) || 0), 0);
+
+      const porSituacao = {};
+      itens.forEach((item) => {
+        const chave = item.situacao || 'Não informada';
+        porSituacao[chave] = (porSituacao[chave] || 0) + 1;
+      });
+
+      const badges = Object.entries(porSituacao)
+        .sort((a, b) => b[1] - a[1])
+        .map(([situacao, qtd]) => `<span class="badge">${situacao}: ${qtd}</span>`)
+        .join('');
+
+      statGrid.innerHTML = `
+        <div class="stat-tile">
+          <div class="stat-value">${total}</div>
+          <div class="stat-label">Pregões monitorados</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">${formatarMoeda(valorTotal)}</div>
+          <div class="stat-label">Valor total estimado</div>
+        </div>
+        <div class="stat-tile wide">
+          <div class="stat-label">Por situação</div>
+          <div class="situacao-breakdown">${badges || '<span class="empty-msg">—</span>'}</div>
+        </div>
+      `;
+    }
+
+    function renderDetalhe(item) {
+      if (!item) {
+        monitorDetailEl.innerHTML = '<p class="empty-msg">Selecione um pregão na lista ao lado.</p>';
+        return;
+      }
+
+      monitorDetailEl.innerHTML = `
+        <div class="monitor-detail-header">
+          <div>
+            <h3>UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}</h3>
+            <div class="monitor-detail-orgao">${item.orgao || item.unidade || 'Órgão não informado'}</div>
+          </div>
+          <div class="monitor-detail-acoes">
+            <button type="button" class="acao-btn favoritar${item.favorito ? ' ativo' : ''}" id="btnFavoritar" title="${item.favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}" aria-pressed="${item.favorito ? 'true' : 'false'}" aria-label="${item.favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}">
+              <span class="material-symbols-outlined" aria-hidden="true">star</span>
+            </button>
+            <button type="button" class="acao-btn excluir" id="btnExcluir" title="Excluir monitoramento" aria-label="Excluir monitoramento">
+              <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+            </button>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-field">
+            <div class="detail-label">Portal</div>
+            <div class="detail-value">Comprasnet</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Órgão</div>
+            <div class="detail-value">${item.unidade || item.orgao || '—'}</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Modalidade</div>
+            <div class="detail-value">${item.modalidade || '—'}</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Situação</div>
+            <div class="detail-value">${item.situacao || '—'}</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Data Abertura</div>
+            <div class="detail-value">${formatarData(item.dataAbertura)}</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Data Encerramento</div>
+            <div class="detail-value">${formatarData(item.dataEncerramento)}</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Data Monitoração</div>
+            <div class="detail-value">${formatarData(item.criadoEm)}</div>
+          </div>
+          <div class="detail-field">
+            <div class="detail-label">Valor estimado</div>
+            <div class="detail-value">${formatarMoeda(item.valorEstimado)}</div>
+          </div>
+        </div>
+        <div class="detail-objeto">${item.objeto || 'Sem descrição do objeto.'}</div>
+        <div class="result-url">
+          Página no ComprasNet:
+          <a class="result-link" href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>
+        </div>
+
+        <div class="mensagens-section">
+          <h4>Mensagens da Sessão Pública</h4>
+          <div class="mensagens-lista" id="mensagensLista" role="status" aria-live="polite"><p class="empty-msg"><span class="spinner" aria-hidden="true"></span>Carregando mensagens...</p></div>
+        </div>
+      `;
+
+      document.getElementById('btnFavoritar').addEventListener('click', () => toggleFavorito(item));
+      document.getElementById('btnExcluir').addEventListener('click', () => excluirMonitorado(item));
+
+      carregarMensagens(item.idCompra);
+    }
+
+    async function toggleFavorito(item) {
+      const btn = document.getElementById('btnFavoritar');
+      const novoValor = !item.favorito;
+      btn.disabled = true;
+      try {
+        const resp = await fetch(`/api/monitorados/${item.idCompra}/favorito`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ favorito: novoValor }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao atualizar favorito.');
+
+        item.favorito = novoValor;
+        todosItens.sort((a, b) => (b.favorito === a.favorito ? 0 : b.favorito ? 1 : -1));
+        renderLista();
+        renderDetalhe(item);
+      } catch (err) {
+        btn.disabled = false;
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+      }
+    }
+
+    async function excluirMonitorado(item) {
+      const confirmado = window.confirm(
+        `Excluir o monitoramento do UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}?`
+      );
+      if (!confirmado) return;
+
+      const btn = document.getElementById('btnExcluir');
+      btn.disabled = true;
+      try {
+        const resp = await fetch(`/api/monitorados/${item.idCompra}`, { method: 'DELETE' });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao excluir pregão.');
+
+        todosItens = todosItens.filter((i) => i.idCompra !== item.idCompra);
+        renderDashboard(todosItens);
+        aplicarFiltro();
+      } catch (err) {
+        btn.disabled = false;
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+      }
+    }
+
+    async function carregarMensagens(idCompra) {
+      const listaEl = document.getElementById('mensagensLista');
+      if (!listaEl) return;
+
+      try {
+        const resp = await fetch(`/api/mensagens/${idCompra}`);
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar mensagens.');
+
+        if (dados.itens.length === 0) {
+          listaEl.innerHTML = '<p class="empty-msg">Nenhuma mensagem salva ainda.</p>';
+          return;
+        }
+
+        listaEl.innerHTML = dados.itens
+          .map(
+            (m) => `
+              <div class="mensagem-bolha">
+                <div class="mensagem-cabecalho">
+                  <span>${m.remetente || 'Mensagem'}</span>
+                  ${m.grupo ? `<span class="grupo">${m.grupo}</span>` : ''}
+                </div>
+                <div class="mensagem-texto">${m.mensagem}</div>
+                <div class="mensagem-data">${m.dataHoraTexto || ''}</div>
+              </div>
+            `
+          )
+          .join('');
+      } catch (err) {
+        listaEl.innerHTML = `<p class="empty-msg">${err.message}</p>`;
+      }
+    }
+
+    function renderLista() {
+      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+      const pagina = itensFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+      monitorListEl.innerHTML = '';
+      pagina.forEach((item) => {
+        const selecionado = item.idCompra === idSelecionado;
+        const row = document.createElement('div');
+        row.className = 'monitor-row' + (selecionado ? ' selected' : '');
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('aria-pressed', String(selecionado));
+        row.setAttribute('aria-label', `UASG ${item.uasg}, Pregão ${item.numeroPregao}/${item.anoPregao}, situação ${item.situacao || 'não informada'}`);
+        row.innerHTML = `
+          <span class="monitor-pill ${ehAlerta(item.situacao) ? 'status-alerta' : ''}">${item.uasg} / ${item.numeroPregao}${item.anoPregao}</span>
+        `;
+        const selecionar = () => {
+          idSelecionado = item.idCompra;
+          renderLista();
+          renderDetalhe(item);
+        };
+        row.addEventListener('click', selecionar);
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selecionar();
+          }
+        });
+        monitorListEl.appendChild(row);
+      });
+
+      const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA));
+      paginationEl.innerHTML = '';
+      for (let p = 1; p <= totalPaginas; p++) {
+        const btn = document.createElement('button');
+        btn.textContent = p;
+        btn.type = 'button';
+        btn.className = p === paginaAtual ? 'active' : '';
+        btn.setAttribute('aria-label', `Página ${p}`);
+        if (p === paginaAtual) btn.setAttribute('aria-current', 'page');
+        btn.addEventListener('click', () => {
+          paginaAtual = p;
+          renderLista();
+        });
+        paginationEl.appendChild(btn);
+      }
+    }
+
+    function aplicarFiltro() {
+      const termo = filtroInput.value.trim().toLowerCase();
+      itensFiltrados = !termo
+        ? todosItens
+        : todosItens.filter((item) => {
+            const campos = [item.orgao, item.unidade, item.uasg, item.numeroPregao, item.objeto, item.uf]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+            return campos.includes(termo);
+          });
+
+      paginaAtual = 1;
+
+      if (itensFiltrados.length === 0) {
+        monitorLayout.style.display = 'none';
+        statusMsg.textContent = 'Nenhum pregão monitorado encontrado.';
+        return;
+      }
+
+      statusMsg.textContent = '';
+      monitorLayout.style.display = 'flex';
+
+      if (!itensFiltrados.some((item) => item.idCompra === idSelecionado)) {
+        idSelecionado = itensFiltrados[0].idCompra;
+      }
+
+      renderLista();
+      renderDetalhe(itensFiltrados.find((item) => item.idCompra === idSelecionado));
+    }
+
+    filtroInput.addEventListener('input', aplicarFiltro);
+
+    async function carregar() {
+      statusMsg.classList.remove('error');
+      statusMsg.innerHTML = '<span class="spinner" aria-hidden="true"></span>Carregando pregões monitorados...';
+      try {
+        const resp = await fetch('/api/monitorados');
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar dados.');
+
+        todosItens = dados.itens;
+        renderDashboard(todosItens);
+        aplicarFiltro();
+      } catch (err) {
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+      }
+    }
+
+    carregar();
+  </script>
+</body>
+</html>

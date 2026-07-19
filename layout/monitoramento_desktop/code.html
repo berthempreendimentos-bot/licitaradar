@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PEPACORP NOTIFICA | Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Hanken+Grotesk:wght@700;800;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#e5eeff",
+                    "primary-fixed-dim": "#ffb3b6",
+                    "primary-container": "#e11d48",
+                    "on-tertiary-fixed-variant": "#444749",
+                    "surface": "#f8f9ff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#920028",
+                    "error-container": "#ffdad6",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-error-container": "#93000a",
+                    "on-secondary-container": "#5c647a",
+                    "primary-fixed": "#ffdada",
+                    "primary": "#b80035",
+                    "secondary-container": "#dae2fd",
+                    "on-primary-container": "#fffaf9",
+                    "surface-container-high": "#dce9ff",
+                    "surface-tint": "#be0037",
+                    "on-primary": "#ffffff",
+                    "inverse-primary": "#ffb3b6",
+                    "inverse-on-surface": "#eaf1ff",
+                    "tertiary-container": "#717476",
+                    "secondary": "#565e74",
+                    "on-background": "#0b1c30",
+                    "inverse-surface": "#213145",
+                    "surface-bright": "#f8f9ff",
+                    "tertiary": "#585c5d",
+                    "on-surface-variant": "#5c3f40",
+                    "secondary-fixed": "#dae2fd",
+                    "on-tertiary-fixed": "#191c1e",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-tertiary-container": "#f9fbfd",
+                    "outline-variant": "#e5bdbe",
+                    "on-primary-fixed": "#40000c",
+                    "outline": "#906f70",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#e0e3e5",
+                    "on-surface": "#0b1c30",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "on-secondary": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "on-secondary-fixed": "#131b2e",
+                    "background": "#f8f9ff",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#c4c7c9",
+                    "surface-variant": "#d3e4fe",
+                    "surface-container-low": "#eff4ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "section-gap": "48px",
+                    "container-padding-desktop": "80px",
+                    "base": "8px",
+                    "input-padding": "16px",
+                    "gutter": "24px",
+                    "container-padding-mobile": "24px"
+            },
+            "fontFamily": {
+                    "label-caps": ["Inter"],
+                    "button-text": ["Hanken Grotesk"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "headline-xl": ["Hanken Grotesk"],
+                    "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "label-caps": ["11px", {"lineHeight": "1.0", "letterSpacing": "0.08em", "fontWeight": "700"}],
+                    "button-text": ["14px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-xl": ["56px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f8f9ff;
+            color: #0b1c30;
+        }
+        .status-critical {
+            background-color: rgba(184, 0, 53, 0.1);
+            color: #b80035;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="overflow-hidden font-body-md text-body-md">
+<!-- Desktop Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-lowest border-r border-outline-variant flex flex-col py-base z-50">
+<div class="px-6 py-8">
+<h1 class="font-headline-lg text-headline-lg font-extrabold text-primary tracking-tighter">PEPACORP</h1>
+<p class="font-label-caps text-label-caps text-on-tertiary-fixed-variant opacity-70">NOTIFICA</p>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<!-- Active: Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary font-bold border-r-4 border-primary bg-primary-fixed-dim/10 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-caps text-label-caps">Search Bids</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-label-caps text-label-caps">Notifications</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-label-caps text-label-caps">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</a>
+</nav>
+<div class="p-4 mt-auto">
+<button class="w-full bg-primary text-on-primary font-button-text text-button-text py-4 rounded-none hover:bg-on-primary-fixed-variant transition-all flex items-center justify-center gap-2">
+                NEW MONITOR <span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<div class="mt-6 flex items-center gap-3 px-2">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Close-up professional portrait of a corporate executive with a serious expression, shot in a high-contrast style with soft studio lighting. The background is a clean, minimalist grey. The overall aesthetic is professional, sharp, and authoritative, matching the corporate branding of PEPACORP." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBzOqhd8RfFgeR1sPjn3BwEsCzCTfHGlnAGdzUzN0_dfVQdO0jPCUgvkqrtY5R9BqldXePPssc-LqRLbh-2ESI49eBy1W3MJJo_ZVD18hifyFv7XMs6PNCkXmWxKPKIcPWUv2deAchMjyq-8sbROSKIAYjq-CSvygo0kB__wIEzZ6P28zpzUB05Ei_oEh0-PTBYJcTzho0kwtrmqxdBPI2zdjISfjM3uIrspoIKh5eWvx933JNUVUu_A"/>
+</div>
+<div>
+<p class="font-label-caps text-[10px] text-on-tertiary-fixed-variant">ADMIN SESSION</p>
+<p class="font-bold text-sm">John Wick</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex flex-row h-screen bg-surface">
+<!-- Center Summary & Table Column -->
+<section class="flex-1 overflow-y-auto p-container-padding-desktop scrollbar-hide">
+<header class="mb-10">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Operational Overview</h2>
+<p class="text-on-secondary-container">Monitoring live bidding cycles across international sectors.</p>
+</header>
+<!-- Summary Statistics Cards (Bento Style) -->
+<div class="grid grid-cols-12 gap-gutter mb-section-gap">
+<div class="col-span-4 bg-surface-container-lowest p-6 border-l-4 border-primary shadow-sm">
+<span class="font-label-caps text-label-caps text-on-secondary-container">TOTAL MONITORED</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface">1,284</span>
+<span class="text-xs text-primary font-bold">+12%</span>
+</div>
+</div>
+<div class="col-span-4 bg-surface-container-lowest p-6 border-l-4 border-on-tertiary-fixed-variant shadow-sm">
+<span class="font-label-caps text-label-caps text-on-secondary-container">ACTIVE BIDS</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface">42</span>
+<span class="text-xs text-on-tertiary-fixed-variant font-bold">URGENT</span>
+</div>
+</div>
+<div class="col-span-4 bg-surface-container-lowest p-6 border-l-4 border-outline-variant shadow-sm">
+<span class="font-label-caps text-label-caps text-on-secondary-container">FINALIZED</span>
+<div class="flex items-baseline gap-2 mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface">892</span>
+<span class="text-xs text-outline font-bold">HISTORIC</span>
+</div>
+</div>
+</div>
+<!-- Tracked Bids Table Area -->
+<div class="bg-surface-container-lowest shadow-sm">
+<div class="px-6 py-4 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-label-caps text-label-caps text-on-surface">ACTIVE TRACKED BIDS</h3>
+<div class="flex gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">filter_list</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">download</span>
+</div>
+</div>
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-6 py-4 font-label-caps text-[10px] text-on-secondary-container">BID IDENTIFIER</th>
+<th class="px-6 py-4 font-label-caps text-[10px] text-on-secondary-container">ENTITIY / SECTOR</th>
+<th class="px-6 py-4 font-label-caps text-[10px] text-on-secondary-container">STATUS</th>
+<th class="px-6 py-4 font-label-caps text-[10px] text-on-secondary-container">DEADLINE</th>
+<th class="px-6 py-4 font-label-caps text-[10px] text-on-secondary-container">VALUE</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container transition-colors cursor-pointer group">
+<td class="px-6 py-5 font-bold text-sm">PEPA-2024-001</td>
+<td class="px-6 py-5 text-on-secondary-container text-sm">Global Defense Systems</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase">CRITICAL</span>
+</td>
+<td class="px-6 py-5 text-sm">14h 22m</td>
+<td class="px-6 py-5 text-sm font-bold">$4.2M</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-6 py-5 font-bold text-sm">CORP-X-992</td>
+<td class="px-6 py-5 text-on-secondary-container text-sm">Infra Logistics Ltd.</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-secondary-container text-on-secondary-container uppercase">MONITORING</span>
+</td>
+<td class="px-6 py-5 text-sm">3d 10h</td>
+<td class="px-6 py-5 text-sm font-bold">$1.8M</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors cursor-pointer border-l-4 border-primary">
+<td class="px-6 py-5 font-bold text-sm">SEC-B-112</td>
+<td class="px-6 py-5 text-on-secondary-container text-sm">National Security Hub</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase">BID SUBMITTED</span>
+</td>
+<td class="px-6 py-5 text-sm">02h 05m</td>
+<td class="px-6 py-5 text-sm font-bold">$12.5M</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors cursor-pointer">
+<td class="px-6 py-5 font-bold text-sm">TECH-A-445</td>
+<td class="px-6 py-5 text-on-secondary-container text-sm">Data Core Solutions</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-surface-container-highest text-on-tertiary-fixed-variant uppercase">EVALUATING</span>
+</td>
+<td class="px-6 py-5 text-sm">5d 12h</td>
+<td class="px-6 py-5 text-sm font-bold">$750K</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 border-t border-outline-variant flex justify-center">
+<button class="font-button-text text-button-text text-primary flex items-center gap-1 hover:underline">
+                        VIEW ALL TRACKED BIDS <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Right Activity & Deadline Column -->
+<aside class="w-80 h-full border-l border-outline-variant bg-surface-container-low flex flex-col">
+<div class="p-6 border-b border-outline-variant">
+<h3 class="font-label-caps text-label-caps text-on-surface">DEADLINE TIMELINE</h3>
+</div>
+<div class="flex-1 overflow-y-auto p-6 scrollbar-hide space-y-8">
+<!-- Timeline Element -->
+<div class="relative pl-6 border-l-2 border-outline-variant">
+<div class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-primary"></div>
+<p class="font-label-caps text-[10px] text-primary mb-1">TODAY, 18:00</p>
+<p class="font-bold text-sm mb-1">Defense Contract Submission</p>
+<p class="text-xs text-on-secondary-container">Final verification of all documents required.</p>
+</div>
+<div class="relative pl-6 border-l-2 border-outline-variant">
+<div class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-on-tertiary-fixed-variant"></div>
+<p class="font-label-caps text-[10px] text-on-tertiary-fixed-variant mb-1">TOMORROW, 09:00</p>
+<p class="font-bold text-sm mb-1">Logistics RFP Opening</p>
+<p class="text-xs text-on-secondary-container">Live session monitoring for price disclosure.</p>
+</div>
+<!-- Recent Activity Section -->
+<div class="pt-4">
+<h3 class="font-label-caps text-label-caps text-on-surface mb-6">RECENT ACTIVITY</h3>
+<div class="space-y-6">
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px] text-primary">update</span>
+</div>
+<div>
+<p class="text-xs text-on-surface leading-tight"><span class="font-bold">System</span> updated bid <span class="font-bold">PEPA-2024-001</span> status to Critical.</p>
+<p class="text-[10px] text-on-secondary-container mt-1">2 mins ago</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px] text-secondary">person</span>
+</div>
+<div>
+<p class="text-xs text-on-surface leading-tight"><span class="font-bold">Sarah Chen</span> attached 4 documents to <span class="font-bold">CORP-X-992</span>.</p>
+<p class="text-[10px] text-on-secondary-container mt-1">45 mins ago</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px] text-primary">notifications_active</span>
+</div>
+<div>
+<p class="text-xs text-on-surface leading-tight"><span class="font-bold">Alert:</span> New bidding opportunity found in <span class="font-bold">Infrastructure</span>.</p>
+<p class="text-[10px] text-on-secondary-container mt-1">2 hours ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Urgent Notification Badge/Card -->
+<div class="m-6 p-4 bg-primary text-on-primary rounded-none shadow-lg">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-caps text-[10px]">URGENT BROADCAST</span>
+</div>
+<p class="text-xs font-bold leading-tight">Server maintenance scheduled for 02:00 GMT. Bid auto-sync will be paused.</p>
+</div>
+</aside>
+</main>
+<!-- Micro-interaction Scripts -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hover effect for table rows
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                row.addEventListener('mouseenter', () => {
+                    row.style.transform = 'translateX(4px)';
+                    row.style.transition = 'transform 0.2s ease-out';
+                });
+                row.addEventListener('mouseleave', () => {
+                    row.style.transform = 'translateX(0)';
+                });
+            });
+
+            // Active state logic for nav items
+            const navItems = document.querySelectorAll('nav a');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    navItems.forEach(ni => {
+                        ni.classList.remove('text-primary', 'font-bold', 'border-r-4', 'border-primary', 'bg-primary-fixed-dim/10');
+                        ni.classList.add('text-on-tertiary-fixed-variant');
+                    });
+                    item.classList.add('text-primary', 'font-bold', 'border-r-4', 'border-primary', 'bg-primary-fixed-dim/10');
+                    item.classList.remove('text-on-tertiary-fixed-variant');
+                });
+            });
+        });
+    </script>
+</body></html>

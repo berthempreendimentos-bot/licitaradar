@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — WhatsApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .page.wide {
+    max-width: 1000px;
+  }
+
+  .layout {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .col-webhook {
+    width: 380px;
+    flex: none;
+  }
+
+  .col-numeros {
+    flex: 1;
+  }
+
+  .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .campo label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--label);
+  }
+
+  .campo-ajuda {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .numero-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .numero-form input {
+    flex: 1;
+  }
+
+  .numeros-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .numero-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+
+  .numero-item button {
+    border: none;
+    background: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .empty-msg {
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 720px) {
+    .layout { flex-direction: column; }
+    .col-webhook { width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+    <div class="page wide">
+    <div class="layout">
+      <div class="col-webhook card">
+        <h3 style="margin-top:0;">Webhook</h3>
+        <p class="campo-ajuda" style="margin-top:0;margin-bottom:16px;">
+          Toda vez que um alerta for gerado, o sistema envia um POST com a lista de números
+          e os dados do alerta pra essa URL. Quem efetivamente manda a mensagem pro WhatsApp
+          é a automação do outro lado (n8n, Make, Zapier, endpoint próprio etc.).
+        </p>
+        <form id="webhookForm">
+          <div class="campo">
+            <label for="webhookUrl">URL do webhook</label>
+            <input type="url" id="webhookUrl" class="text-input" placeholder="https://sua-automacao.com/webhook" autocomplete="off">
+          </div>
+          <button class="monitor-btn" type="submit">Salvar webhook</button>
+        </form>
+        <div class="status-msg" id="webhookStatusMsg" role="status" aria-live="polite"></div>
+      </div>
+
+      <div class="col-numeros card">
+        <h3 style="margin-top:0;">Números que recebem as mensagens</h3>
+        <form class="numero-form" id="numeroForm">
+          <label class="sr-only" for="novoNumero">Novo número</label>
+          <input type="text" id="novoNumero" class="text-input" placeholder="Ex.: (11) 91234-5678" autocomplete="off">
+          <button class="monitor-btn" type="submit">+</button>
+        </form>
+        <div class="status-msg" id="numerosStatusMsg" role="status" aria-live="polite"></div>
+        <div class="numeros-lista" id="numerosLista"><p class="empty-msg">Carregando...</p></div>
+      </div>
+    </div>
+    </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      label.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const saved = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // ---------- Webhook ----------
+
+    const webhookForm = document.getElementById('webhookForm');
+    const webhookUrlInput = document.getElementById('webhookUrl');
+    const webhookStatusMsg = document.getElementById('webhookStatusMsg');
+
+    async function carregarWebhook() {
+      try {
+        const resp = await fetch('/api/whatsapp/config');
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar configuração.');
+        webhookUrlInput.value = dados.webhookUrl || '';
+      } catch (err) {
+        webhookStatusMsg.classList.add('error');
+        webhookStatusMsg.textContent = err.message;
+      }
+    }
+
+    webhookForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      webhookStatusMsg.classList.remove('error');
+      webhookStatusMsg.textContent = 'Salvando...';
+      try {
+        const resp = await fetch('/api/whatsapp/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webhookUrl: webhookUrlInput.value.trim() }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao salvar webhook.');
+        webhookStatusMsg.textContent = 'Webhook salvo.';
+      } catch (err) {
+        webhookStatusMsg.classList.add('error');
+        webhookStatusMsg.textContent = err.message;
+      }
+    });
+
+    // ---------- Números ----------
+
+    const numeroForm = document.getElementById('numeroForm');
+    const novoNumeroInput = document.getElementById('novoNumero');
+    const numerosListaEl = document.getElementById('numerosLista');
+    const numerosStatusMsg = document.getElementById('numerosStatusMsg');
+
+    async function carregarNumeros() {
+      try {
+        const resp = await fetch('/api/whatsapp/numeros');
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar números.');
+
+        if (dados.itens.length === 0) {
+          numerosListaEl.innerHTML = '<p class="empty-msg">Nenhum número cadastrado.</p>';
+          return;
+        }
+
+        numerosListaEl.innerHTML = dados.itens
+          .map(
+            (n) => `
+              <div class="numero-item" data-id="${n.id}">
+                <span>${n.numero}</span>
+                <button type="button" data-id="${n.id}" title="Remover">✕</button>
+              </div>
+            `
+          )
+          .join('');
+
+        numerosListaEl.querySelectorAll('button[data-id]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            await fetch(`/api/whatsapp/numeros/${btn.dataset.id}`, { method: 'DELETE' });
+            carregarNumeros();
+          });
+        });
+      } catch (err) {
+        numerosListaEl.innerHTML = `<p class="empty-msg">${err.message}</p>`;
+      }
+    }
+
+    numeroForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const numero = novoNumeroInput.value.trim();
+      if (!numero) return;
+
+      numerosStatusMsg.classList.remove('error');
+      numerosStatusMsg.textContent = '';
+      try {
+        const resp = await fetch('/api/whatsapp/numeros', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numero }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao adicionar número.');
+        novoNumeroInput.value = '';
+        carregarNumeros();
+      } catch (err) {
+        numerosStatusMsg.classList.add('error');
+        numerosStatusMsg.textContent = err.message;
+      }
+    });
+
+    // Entrar nesta tela silencia qualquer alarme contínuo tocando de um alerta anterior.
+    window.RadarNotificacoes.pararAlarme();
+
+    carregarWebhook();
+    carregarNumeros();
+  </script>
+</body>
+</html>
