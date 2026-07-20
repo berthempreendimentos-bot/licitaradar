@@ -3,7 +3,6 @@ const express = require('express');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
-const routes = require('./src/routes');
 const { getSupabase } = require('./src/supabaseClient');
 
 const app = express();
@@ -124,7 +123,12 @@ app.get('/api/me', (req, res) => {
 
 app.use(exigirLogin);
 app.use(express.static(path.join(__dirname, '..')));
-app.use(routes);
+// Nota: a rota /contratacoes (server/src/routes.js) usa Prisma + SQLite local
+// (arquivo dev.db) e não está ligada a nenhuma tela do produto — é sobra de um
+// scaffold anterior. Não é montada aqui de propósito: SQLite em arquivo não
+// funciona em serverless (Vercel), o sistema de arquivos é somente leitura/efêmero.
+// Se essa funcionalidade for retomada, precisa migrar para o Supabase (Postgres)
+// como todo o resto do app antes de voltar a ser montada.
 
 // ---------- Alertas em tempo real (Server-Sent Events) ----------
 // Mantém uma conexão aberta por aba de navegador para empurrar o alerta assim
@@ -139,6 +143,10 @@ app.get('/api/eventos', (req, res) => {
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
   });
+  // Em serverless (Vercel) essa conexão não fica de pé entre invocações — o navegador
+  // vai cair e tentar de novo. "retry" evita que ele martele o endpoint a cada ~3s
+  // (padrão do EventSource); o polling da tela de Alertas já cobre a entrega nesse caso.
+  res.write('retry: 30000\n');
   res.write(':ok\n\n');
   if (res.flushHeaders) res.flushHeaders();
 
