@@ -16,6 +16,7 @@ function exigirLogin(req, res, next) {
   // Permite que o robô (Python/JS) envie mensagens e consulte a lista sem precisar de sessão
   if (req.path.startsWith('/api/mensagens/') && req.method === 'POST') return next();
   if (req.path === '/api/monitorados' && req.method === 'GET') return next();
+  if (req.path === '/api/bot/alerta' && req.method === 'POST') return next();
 
   if (req.session && req.session.usuarioId) return next();
   if (req.path.startsWith('/api/')) {
@@ -160,6 +161,41 @@ function transmitirAlerta(alerta) {
     cliente.write(payload);
   }
 }
+
+const TIPOS_NOTIFICACAO_ALERTA = new Set(['padrao', 'urgente', 'silencioso']);
+
+// Chamado pelo watchdog local (monitor_bot_infinito.py) quando o bot_infinito.py
+// para de rodar (ou volta a rodar) no PC do usuário. Reaproveita o mesmo caminho de
+// notificação dos alertas de palavra-chave: pop-up/som em qualquer aba aberta (SSE)
+// e mensagem pelo webhook do WhatsApp configurado.
+app.post('/api/bot/alerta', async (req, res) => {
+  const mensagem = String((req.body || {}).mensagem || '').trim();
+  const tipoNotificacaoBruto = String((req.body || {}).tipoNotificacao || 'urgente').trim();
+  const tipoNotificacao = TIPOS_NOTIFICACAO_ALERTA.has(tipoNotificacaoBruto) ? tipoNotificacaoBruto : 'urgente';
+
+  if (!mensagem) {
+    return res.status(400).json({ erro: 'Informe a mensagem do alerta.' });
+  }
+
+  const alerta = {
+    id: 'bot-' + Date.now(),
+    palavraEncontrada: 'Robô local',
+    tipoNotificacao,
+    mensagem,
+    criadoEm: new Date().toISOString(),
+  };
+
+  transmitirAlerta(alerta);
+
+  try {
+    const supabase = getSupabase();
+    await notificarWhatsapp(supabase, [alerta]);
+  } catch (erroWhatsapp) {
+    console.error('Erro ao notificar WhatsApp sobre status do robô:', erroWhatsapp.message);
+  }
+
+  res.json({ ok: true });
+});
 
 app.get('/api/buscar', async (req, res) => {
   const uasg = String(req.query.uasg || '').trim();
