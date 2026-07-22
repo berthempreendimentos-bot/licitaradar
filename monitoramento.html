@@ -481,11 +481,6 @@
     let paginaAtual = 1;
     let idSelecionado = null;
 
-    function formatarMoeda(valor) {
-      if (valor === null || valor === undefined) return '—';
-      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
-
     function formatarData(iso) {
       if (!iso) return '—';
       const d = new Date(iso);
@@ -499,7 +494,7 @@
 
     function renderDashboard(itens) {
       const total = itens.length;
-      const valorTotal = itens.reduce((soma, item) => soma + (Number(item.valorEstimado) || 0), 0);
+      const totalFavoritos = itens.filter((item) => item.favorito).length;
 
       const porSituacao = {};
       itens.forEach((item) => {
@@ -518,8 +513,8 @@
           <div class="stat-label">Pregões monitorados</div>
         </div>
         <div class="stat-tile">
-          <div class="stat-value">${formatarMoeda(valorTotal)}</div>
-          <div class="stat-label">Valor total estimado</div>
+          <div class="stat-value">${totalFavoritos}</div>
+          <div class="stat-label">Favoritos</div>
         </div>
         <div class="stat-tile wide">
           <div class="stat-label">Por situação</div>
