@@ -72,7 +72,7 @@ function normalizarNumeroPregao(valor) {
 }
 
 const { parseMensagensColadas, verificarPalavrasChave } = require('./src/utils/mensagens');
-const { notificarWhatsapp } = require('./src/services/whatsappWebhook');
+const { notificarWhatsapp, testarWebhook } = require('./src/services/whatsappWebhook');
 
 app.use(express.json());
 app.use(
@@ -698,6 +698,22 @@ app.post('/api/whatsapp/numeros', async (req, res) => {
   } catch (erro) {
     console.error('Erro ao salvar número do WhatsApp:', erro.message);
     res.status(502).json({ erro: 'Não foi possível salvar o número agora.' });
+  }
+});
+
+app.post('/api/whatsapp/testar', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const resultado = await testarWebhook(supabase);
+
+    if (resultado.erro) {
+      return res.status(400).json({ erro: resultado.erro });
+    }
+
+    res.json(resultado);
+  } catch (erro) {
+    console.error('Erro ao testar webhook do WhatsApp:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível testar o webhook agora.' });
   }
 });
 
