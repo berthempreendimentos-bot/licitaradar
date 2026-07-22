@@ -35,6 +35,16 @@ function formatarData(data) {
   return data.toISOString().slice(0, 10);
 }
 
+// UASG sempre tem 6 dígitos e muitas começam com zero (ex.: 070011). Sem completar
+// com zero à esquerda, a API do governo trata "70011" como um código diferente de
+// "070011" e simplesmente não devolve nenhum resultado (parece bug de busca, mas é
+// só o zero que falta).
+function normalizarUasg(valor) {
+  const digitos = String(valor || '').replace(/\D/g, '');
+  if (!digitos) return '';
+  return digitos.length < 6 ? digitos.padStart(6, '0') : digitos;
+}
+
 // Aceita formatos como "90067", "90067/2026", "090067-2026" ou colado "900672026"
 function normalizarNumeroPregao(valor) {
   if (!valor) return null;
@@ -198,7 +208,7 @@ app.post('/api/bot/alerta', async (req, res) => {
 });
 
 app.get('/api/buscar', async (req, res) => {
-  const uasg = String(req.query.uasg || '').trim();
+  const uasg = normalizarUasg(req.query.uasg);
   const pregaoRaw = String(req.query.pregao || '').trim();
 
   if (!uasg) {
