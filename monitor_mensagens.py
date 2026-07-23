@@ -150,8 +150,49 @@ def abrir_chrome_e_processar(url, id_compra):
     # Abre o Chrome oficial do usuário
     subprocess.run(f'start chrome "{url}"', shell=True)
 
-    print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento da página...")
-    time.sleep(TEMPO_CARREGAR_PAGINA)
+    # Espera ativa de carregamento da página
+    print("[agente] Aguardando a página carregar (espera ativa)...")
+    carregou = False
+    timeout_pag = 30  # segundos máximo
+    start_pag = time.time()
+    
+    # Dá um tempo mínimo para o Chrome abrir
+    time.sleep(2)
+    try:
+        width, height = pyautogui.size()
+        pyautogui.click(x=width // 2, y=height // 2)
+    except Exception as e:
+        print(f"[aviso] Não foi possível obter o tamanho da tela ou focar: {e}")
+        width, height = 1920, 1080  # fallback padrão
+
+    while time.time() - start_pag < timeout_pag:
+        try:
+            # Clica no centro da tela para focar a nova aba/janela do Chrome
+            pyautogui.click(x=width // 2, y=height // 2)
+            time.sleep(0.3)
+            pyperclip.copy("")
+            pyautogui.hotkey('ctrl', 'a')
+            time.sleep(0.2)
+            pyautogui.hotkey('ctrl', 'c')
+            time.sleep(0.3)
+            
+            texto = pyperclip.paste()
+            texto_lower = texto.lower()
+            
+            # Verifica termos específicos que indicam que a página carregou
+            if "acompanhamento" in texto_lower or "mensagens" in texto_lower or "uasg" in texto_lower or "compra" in texto_lower:
+                print(f"[agente] Página carregada com sucesso em {int(time.time() - start_pag)}s!")
+                carregou = True
+                break
+        except Exception as e:
+            print(f"[aviso] Erro na espera ativa: {e}")
+            
+        print("[agente] Página ainda carregando, aguardando...")
+        time.sleep(1.5)
+
+    if not carregou:
+        print(f"[aviso] Tempo limite esgotado esperando a página carregar. Prosseguindo...")
+        time.sleep(2)
 
     if not posicao:
         print("\n" + "="*70)
@@ -168,18 +209,45 @@ def abrir_chrome_e_processar(url, id_compra):
     print("[agente] Clicando no botão Mensagens...")
     pyautogui.click(x=posicao["x"], y=posicao["y"])
     
-    print(f"[agente] Aguardando {TEMPO_ABRIR_MENSAGENS}s a aba de mensagens abrir...")
-    time.sleep(TEMPO_ABRIR_MENSAGENS)
+    # Espera ativa da aba de mensagens
+    print("[agente] Aguardando a aba de mensagens abrir (espera ativa)...")
+    aba_aberta = False
+    timeout_msg = 15  # segundos máximo
+    start_msg = time.time()
     
-    print("[agente] Copiando texto da tela (Ctrl+A, Ctrl+C)...")
-    pyautogui.hotkey('ctrl', 'a')
-    time.sleep(0.5)
-    pyautogui.hotkey('ctrl', 'c')
-    time.sleep(1)
+    while time.time() - start_msg < timeout_msg:
+        try:
+            pyperclip.copy("")
+            pyautogui.hotkey('ctrl', 'a')
+            time.sleep(0.2)
+            pyautogui.hotkey('ctrl', 'c')
+            time.sleep(0.3)
+            
+            texto_chat = pyperclip.paste()
+            texto_chat_lower = texto_chat.lower()
+            
+            # Verifica se contém termos típicos do chat de mensagens
+            if "mensagem do" in texto_chat_lower or "pregoeiro" in texto_chat_lower or "sistema" in texto_chat_lower or "chat" in texto_chat_lower or "voltar" in texto_chat_lower:
+                print(f"[agente] Aba de mensagens aberta e carregada em {int(time.time() - start_msg)}s!")
+                aba_aberta = True
+                break
+        except Exception as e:
+            print(f"[aviso] Erro ao verificar aba de mensagens: {e}")
+            
+        print("[agente] Aguardando abertura das mensagens...")
+        time.sleep(1.0)
+        
+    if not aba_aberta:
+        print(f"[aviso] Tempo limite esgotado esperando a aba de mensagens. Copiando texto atual...")
+        pyautogui.hotkey('ctrl', 'a')
+        time.sleep(0.3)
+        pyautogui.hotkey('ctrl', 'c')
+        time.sleep(0.5)
     
-    # Fechar a aba
+    # Fechar a aba do navegador
     print("[agente] Fechando aba (Ctrl+W)...")
     pyautogui.hotkey('ctrl', 'w')
+    time.sleep(0.5)
     
     texto_bruto = pyperclip.paste()
     
@@ -204,11 +272,12 @@ def processar_licitacao(id_compra):
 def main():
     parser = argparse.ArgumentParser(description="Bot de monitoramento de mensagens (Versao PyAutoGUI / Nuvem).")
     parser.add_argument("--id", type=str, help="ID da licitacao especifica para verificar.")
+    parser.add_argument("--no-wait", action="store_true", help="Ignora a espera de recalibracao e usa as coordenadas salvas imediatamente.")
     args = parser.parse_args()
 
     # Verifica se deseja recalibrar as coordenadas do botão
     posicao = carregar_posicao_botao()
-    if posicao:
+    if posicao and not args.no_wait:
         print(f"[agente] Posicao do botao Mensagens cadastrada: X={posicao['x']}, Y={posicao['y']}")
         print("Pressione 'c' para recalibrar novas coordenadas ou ENTER para usar as atuais.")
         print("(O script continuara automaticamente com as coordenadas salvas em 5 segundos...)")
@@ -239,6 +308,8 @@ def main():
                         print(f"[erro] Nao foi possivel remover as coordenadas salvas: {e}")
         except Exception as e:
             pass
+    elif posicao and args.no_wait:
+        print(f"[agente] Posicao do botao Mensagens cadastrada: X={posicao['x']}, Y={posicao['y']}. Ignorando recalibracao (--no-wait).")
 
     print("[agente] Iniciando... NAO use o mouse/teclado durante a execucao.")
     print("[agente] Para abortar, jogue o mouse no canto superior esquerdo da tela.\n")

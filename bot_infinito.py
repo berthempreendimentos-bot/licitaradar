@@ -26,7 +26,7 @@ def main():
         print(f"\n[loop] Iniciando nova varredura ({datetime.datetime.now().strftime('%H:%M:%S')})...")
         
         # Chama o monitor_mensagens.py usando o mesmo interpretador executando o bot_infinito.py
-        subprocess.run([sys.executable, "monitor_mensagens.py"])
+        subprocess.run([sys.executable, "monitor_mensagens.py", "--no-wait"])
         
         print("[loop] Varredura concluída. Iniciando nova varredura em 2 segundos...")
         time.sleep(2)
