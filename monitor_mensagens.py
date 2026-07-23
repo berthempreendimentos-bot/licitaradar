@@ -27,6 +27,54 @@ TEMPO_ABRIR_MENSAGENS = 5      # segundos esperando a aba de mensagens carregar
 
 # O mouse não será mais utilizado! Usaremos Selenium puro para cliques em background.
 
+def carregar_credenciais_supabase():
+    dir_atual = os.path.dirname(os.path.abspath(__file__))
+    possiveis_caminhos = [
+        os.path.join(dir_atual, "server", ".env"),
+        os.path.join(os.path.dirname(dir_atual), "server", ".env"),
+        os.path.join(dir_atual, ".env"),
+    ]
+    for caminho in possiveis_caminhos:
+        if os.path.exists(caminho):
+            try:
+                credenciais = {}
+                with open(caminho, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line_stripped = line.strip()
+                        if "=" in line_stripped and not line_stripped.startswith("#"):
+                            k, v = line_stripped.split("=", 1)
+                            credenciais[k.strip()] = v.strip()
+                if credenciais.get("SUPABASE_URL") and credenciais.get("SUPABASE_SERVICE_KEY"):
+                    return credenciais
+            except Exception as e:
+                print(f"[aviso] Erro ao ler arquivo .env em {caminho}: {e}")
+    return None
+
+def obter_licitacoes_supabase_fallback():
+    print("[agente] API offline. Tentando obter lista de licitacoes diretamente do Supabase...")
+    cred = carregar_credenciais_supabase()
+    if not cred:
+        print("[erro] Credenciais do Supabase nao encontradas em server/.env")
+        return []
+    
+    url = cred["SUPABASE_URL"]
+    key = cred["SUPABASE_SERVICE_KEY"]
+    req_url = f"{url}/rest/v1/pregoes_monitorados?select=id_compra"
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Accept": "application/json"
+    }
+    req = urllib.request.Request(req_url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_body = response.read().decode()
+            res_json = json.loads(res_body)
+            return [item["id_compra"] for item in res_json if "id_compra" in item]
+    except Exception as e:
+        print(f"[erro] Falha ao obter licitacoes diretamente do Supabase: {e}")
+        return []
+
 def obter_licitacoes():
     print("[agente] Solicitando lista de licitacoes do banco de dados...")
     req = urllib.request.Request(API_URL_MONITORADOS, headers={'Accept': 'application/json'})
@@ -37,8 +85,8 @@ def obter_licitacoes():
             itens = res_json.get("itens", [])
             return [item["idCompra"] for item in itens if "idCompra" in item]
     except Exception as e:
-        print(f"[erro] Falha ao obter lista de licitacoes: {e}")
-        return []
+        print(f"[erro] Falha ao obter lista de licitacoes via API: {e}")
+        return obter_licitacoes_supabase_fallback()
 
 def extrair_mensagens(texto_bruto):
     mensagens = []
