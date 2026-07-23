@@ -16,7 +16,7 @@ def main():
     print("🤖 MÚSCULO DO COMPRASNET - MODO INFINITO 🤖")
     print("=" * 60)
     print(f"Alvo da API: {VERCEL_API}")
-    print(f"Intervalo de varredura: {INTERVALO_MINUTOS} minutos.")
+    print("Intervalo de varredura: Contínuo (imediato).")
     print("Este terminal deve permanecer aberto para puxar ordens da nuvem.")
     print("=" * 60)
 
@@ -28,8 +28,8 @@ def main():
         # Chama o monitor_mensagens.py usando o mesmo interpretador executando o bot_infinito.py
         subprocess.run([sys.executable, "monitor_mensagens.py"])
         
-        print(f"[loop] Varredura concluída. Dormindo por {INTERVALO_MINUTOS} minutos...")
-        time.sleep(INTERVALO_MINUTOS * 60)
+        print("[loop] Varredura concluída. Iniciando nova varredura em 2 segundos...")
+        time.sleep(2)
 
 if __name__ == "__main__":
     main()

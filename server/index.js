@@ -290,6 +290,7 @@ app.get('/api/monitorados', async (req, res) => {
       dataEncerramento: row.data_encerramento,
       link: row.link,
       criadoEm: row.criado_em,
+      atualizadoEm: row.atualizado_em,
       favorito: row.favorito,
     }));
 
@@ -454,6 +455,12 @@ app.post('/api/mensagens/:idCompra', async (req, res) => {
       .select('id, remetente, mensagem, data_hora_texto');
 
     if (error) throw error;
+
+    // Atualiza o timestamp de monitoracao/atualizacao das mensagens do pregao
+    await supabase
+      .from('pregoes_monitorados')
+      .update({ atualizado_em: new Date().toISOString() })
+      .eq('id_compra', idCompra);
 
     const novas = (salvas || []).filter((m) => !jaExistiaSet.has(chave(m)));
     const alertasGerados = await verificarPalavrasChave(supabase, idCompra, novas);
