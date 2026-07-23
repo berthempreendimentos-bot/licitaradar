@@ -95,25 +95,23 @@ def abrir_chrome_e_processar(url, id_compra):
     print(f"[agente] Acessando {url} (abrindo no Chrome padrão)...")
     
     posicao = carregar_posicao_botao()
+
+    # Limpa a área de transferência antes de começar
+    pyperclip.copy("")
+
+    # Abre o Chrome oficial do usuário
+    subprocess.run(f'start chrome "{url}"', shell=True)
+
+    print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento da página...")
+    time.sleep(TEMPO_CARREGAR_PAGINA)
+
     if not posicao:
         print("\n" + "="*70)
         print("PRIMEIRA EXECUÇÃO: CONFIGURAÇÃO DO CLIQUE")
-        print("O robô precisa saber onde fica o botão 'Mensagens' na sua tela.")
-        print("Vou abrir a página agora. Assim que ela carregar, coloque o mouse")
-        print("EXATAMENTE em cima do botão 'Mensagens' e deixe ele lá parado.")
-        print("O robô vai capturar a posição em 15 segundos...")
-        print("="*70 + "\n")
-    
-    # Limpa a área de transferência antes de começar
-    pyperclip.copy("")
-    
-    # Abre o Chrome oficial do usuário
-    subprocess.run(f'start chrome "{url}"', shell=True)
-    
-    print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento da página...")
-    time.sleep(TEMPO_CARREGAR_PAGINA)
-    
-    if not posicao:
+        print("A página já deve ter carregado. Role até achar o botão 'Mensagens'")
+        print("e coloque o mouse EXATAMENTE em cima dele, sem clicar.")
+        print("="*70)
+        input(">>> Com o mouse sobre o botão 'Mensagens', pressione ENTER aqui... ")
         x, y = pyautogui.position()
         print(f"[agente] Posição do mouse capturada: X={x}, Y={y}. Salvando para as próximas vezes.")
         salvar_posicao_botao(x, y)
@@ -160,8 +158,43 @@ def main():
     parser.add_argument("--id", type=str, help="ID da licitacao especifica para verificar.")
     args = parser.parse_args()
 
+    # Verifica se deseja recalibrar as coordenadas do botão
+    posicao = carregar_posicao_botao()
+    if posicao:
+        print(f"[agente] Posicao do botao Mensagens cadastrada: X={posicao['x']}, Y={posicao['y']}")
+        print("Pressione 'c' para recalibrar novas coordenadas ou ENTER para usar as atuais.")
+        print("(O script continuara automaticamente com as coordenadas salvas em 5 segundos...)")
+        
+        try:
+            import msvcrt
+            start_time = time.time()
+            recalibrar = False
+            while time.time() - start_time < 5:
+                if msvcrt.kbhit():
+                    char = msvcrt.getwch().lower()
+                    if char == 'c':
+                        recalibrar = True
+                        print("\n[agente] Recalibracao solicitada pelo usuario.")
+                        break
+                    elif char in ['\r', '\n']:
+                        print("\n[agente] Usando coordenadas salvas.")
+                        break
+                time.sleep(0.05)
+            
+            if recalibrar:
+                arquivo_posicao = os.path.join(os.path.dirname(os.path.abspath(__file__)), "posicao_botao.json")
+                if os.path.exists(arquivo_posicao):
+                    try:
+                        os.remove(arquivo_posicao)
+                        print("[agente] Coordenadas salvas removidas para recalibracao.")
+                    except Exception as e:
+                        print(f"[erro] Nao foi possivel remover as coordenadas salvas: {e}")
+        except Exception as e:
+            pass
+
     print("[agente] Iniciando... NAO use o mouse/teclado durante a execucao.")
     print("[agente] Para abortar, jogue o mouse no canto superior esquerdo da tela.\n")
+
 
     if args.id:
         ids_monitorados = [args.id]
