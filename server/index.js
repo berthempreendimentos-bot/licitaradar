@@ -62,6 +62,7 @@ function normalizarNumeroPregao(valor) {
 
 const { parseMensagensColadas, verificarPalavrasChave } = require('./src/utils/mensagens');
 const { notificarWhatsapp } = require('./src/services/whatsappWebhook');
+const roboLocal = require('./src/services/roboLocal');
 
 app.use(express.json());
 app.use(
@@ -750,6 +751,26 @@ app.post('/api/alertas/:id/marcar-lido', async (req, res) => {
     console.error('Erro ao marcar alerta como lido:', erro.message);
     res.status(502).json({ erro: 'Não foi possível atualizar o alerta agora.' });
   }
+});
+
+app.get('/api/robo/status', (req, res) => {
+  res.json(roboLocal.statusRobo());
+});
+
+app.post('/api/robo/iniciar', (req, res) => {
+  const resultado = roboLocal.iniciarRobo();
+  if (!resultado.ok) return res.status(409).json(resultado);
+  res.json(resultado);
+});
+
+app.post('/api/robo/parar', (req, res) => {
+  const resultado = roboLocal.pararRobo();
+  if (!resultado.ok) return res.status(409).json(resultado);
+  res.json(resultado);
+});
+
+app.get('/api/robo/log', (req, res) => {
+  res.json({ linhas: roboLocal.obterLog() });
 });
 
 // O worker de background não funciona em Vercel

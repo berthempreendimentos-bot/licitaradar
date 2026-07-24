@@ -19,6 +19,19 @@ base_url = os.environ.get("API_BASE_URL", "http://localhost:3001")
 API_URL_MONITORADOS = f"{base_url}/api/monitorados"
 API_URL_BASE = f"{base_url}/api/mensagens"
 
+LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log_atualizacoes.log")
+
+def registrar_log(id_compra, status, detalhe=""):
+    timestamp = datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+    linha = f"[{timestamp}] Licitacao {id_compra} - {status}"
+    if detalhe:
+        linha += f" - {detalhe}"
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(linha + "\n")
+    except Exception as e:
+        print(f"[aviso] Nao foi possivel gravar no log: {e}")
+
 TEMPO_CARREGAR_CHROME = 5      # segundos esperando o Chrome abrir
 TEMPO_CARREGAR_PAGINA = 15     # segundos esperando a página carregar
 TEMPO_ABRIR_MENSAGENS = 5      # segundos esperando a aba de mensagens carregar
@@ -150,49 +163,11 @@ def abrir_chrome_e_processar(url, id_compra):
     # Abre o Chrome oficial do usuário
     subprocess.run(f'start chrome "{url}"', shell=True)
 
-    # Espera ativa de carregamento da página
-    print("[agente] Aguardando a página carregar (espera ativa)...")
-    carregou = False
-    timeout_pag = 30  # segundos máximo
-    start_pag = time.time()
-    
-    # Dá um tempo mínimo para o Chrome abrir
-    time.sleep(2)
-    try:
-        width, height = pyautogui.size()
-        pyautogui.click(x=width // 2, y=height // 2)
-    except Exception as e:
-        print(f"[aviso] Não foi possível obter o tamanho da tela ou focar: {e}")
-        width, height = 1920, 1080  # fallback padrão
+    # Espera o carregamento da página de forma totalmente silenciosa
+    print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento silencioso da página...")
+    time.sleep(TEMPO_CARREGAR_PAGINA)
 
-    while time.time() - start_pag < timeout_pag:
-        try:
-            # Clica no centro da tela para focar a nova aba/janela do Chrome
-            pyautogui.click(x=width // 2, y=height // 2)
-            time.sleep(0.3)
-            pyperclip.copy("")
-            pyautogui.hotkey('ctrl', 'a')
-            time.sleep(0.2)
-            pyautogui.hotkey('ctrl', 'c')
-            time.sleep(0.3)
-            
-            texto = pyperclip.paste()
-            texto_lower = texto.lower()
-            
-            # Verifica termos específicos que indicam que a página carregou
-            if "acompanhamento" in texto_lower or "mensagens" in texto_lower or "uasg" in texto_lower or "compra" in texto_lower:
-                print(f"[agente] Página carregada com sucesso em {int(time.time() - start_pag)}s!")
-                carregou = True
-                break
-        except Exception as e:
-            print(f"[aviso] Erro na espera ativa: {e}")
-            
-        print("[agente] Página ainda carregando, aguardando...")
-        time.sleep(1.5)
 
-    if not carregou:
-        print(f"[aviso] Tempo limite esgotado esperando a página carregar. Prosseguindo...")
-        time.sleep(2)
 
     if not posicao:
         print("\n" + "="*70)
@@ -206,43 +181,27 @@ def abrir_chrome_e_processar(url, id_compra):
         salvar_posicao_botao(x, y)
         posicao = {"x": x, "y": y}
     
+    # Clica no botão Mensagens
     print("[agente] Clicando no botão Mensagens...")
     pyautogui.click(x=posicao["x"], y=posicao["y"])
     
-    # Espera ativa da aba de mensagens
-    print("[agente] Aguardando a aba de mensagens abrir (espera ativa)...")
-    aba_aberta = False
-    timeout_msg = 15  # segundos máximo
-    start_msg = time.time()
+    # Espera silenciosamente a aba de mensagens abrir e carregar
+    print(f"[agente] Aguardando {TEMPO_ABRIR_MENSAGENS}s o carregamento silencioso da aba de mensagens...")
+    time.sleep(TEMPO_ABRIR_MENSAGENS)
     
-    while time.time() - start_msg < timeout_msg:
-        try:
-            pyperclip.copy("")
-            pyautogui.hotkey('ctrl', 'a')
-            time.sleep(0.2)
-            pyautogui.hotkey('ctrl', 'c')
-            time.sleep(0.3)
-            
-            texto_chat = pyperclip.paste()
-            texto_chat_lower = texto_chat.lower()
-            
-            # Verifica se contém termos típicos do chat de mensagens
-            if "mensagem do" in texto_chat_lower or "pregoeiro" in texto_chat_lower or "sistema" in texto_chat_lower or "chat" in texto_chat_lower or "voltar" in texto_chat_lower:
-                print(f"[agente] Aba de mensagens aberta e carregada em {int(time.time() - start_msg)}s!")
-                aba_aberta = True
-                break
-        except Exception as e:
-            print(f"[aviso] Erro ao verificar aba de mensagens: {e}")
-            
-        print("[agente] Aguardando abertura das mensagens...")
-        time.sleep(1.0)
-        
-    if not aba_aberta:
-        print(f"[aviso] Tempo limite esgotado esperando a aba de mensagens. Copiando texto atual...")
-        pyautogui.hotkey('ctrl', 'a')
-        time.sleep(0.3)
-        pyautogui.hotkey('ctrl', 'c')
+    # Garante o foco na janela ativa do Chrome clicando no centro da tela antes de copiar
+    print("[agente] Focando no Chrome e copiando mensagens (Ctrl+A, Ctrl+C)...")
+    try:
+        width, height = pyautogui.size()
+        pyautogui.click(x=width // 2, y=height // 2)
         time.sleep(0.5)
+    except Exception as e:
+        print(f"[aviso] Não foi possível clicar no centro da tela para focar: {e}")
+        
+    pyautogui.hotkey('ctrl', 'a')
+    time.sleep(0.5)
+    pyautogui.hotkey('ctrl', 'c')
+    time.sleep(1.0)
     
     # Fechar a aba do navegador
     print("[agente] Fechando aba (Ctrl+W)...")
@@ -255,14 +214,17 @@ def abrir_chrome_e_processar(url, id_compra):
     
     if not texto_limpo.strip():
         print("ERRO: Nenhuma mensagem detectada. Talvez a pagina nao tenha carregado as mensagens a tempo.")
+        registrar_log(id_compra, "FALHA", "Nenhuma mensagem detectada na pagina")
     else:
         resultado_api = enviar_para_api(texto_limpo, id_compra)
         if resultado_api and resultado_api.get("ok"):
             tot = resultado_api.get('total', 0)
             novas = resultado_api.get('novas', 0)
             print(f"[ok] A aplicacao encontrou {tot} msgs no total. {novas} novas salvas!")
+            registrar_log(id_compra, "OK", f"{tot} msgs no total, {novas} novas")
         else:
             print("[aviso] Falha na integracao com a API.")
+            registrar_log(id_compra, "FALHA", "Falha na integracao com a API")
 
 def processar_licitacao(id_compra):
     url_licitacao = f"https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra={id_compra}"

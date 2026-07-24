@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Painel Local</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .robo-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+    margin-bottom: 20px;
+  }
+
+  .robo-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .robo-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .robo-subtitulo {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .robo-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .robo-pill.rodando {
+    background: rgba(46, 160, 67, 0.14);
+    color: #2ea043;
+  }
+
+  .robo-pill.parado {
+    background: var(--accent-tint);
+    color: var(--muted);
+  }
+
+  .robo-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .robo-acoes {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .robo-info {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .log-panel {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+    overflow: hidden;
+  }
+
+  .log-panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .log-output {
+    height: 420px;
+    overflow-y: auto;
+    padding: 12px 16px;
+    margin: 0;
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .log-output .log-linha-erro {
+    color: var(--danger);
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+        <a href="painel-local.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">terminal</span><span>Painel Local</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+    <div class="page wide">
+
+    <div class="robo-card">
+      <div class="robo-card-header">
+        <div>
+          <div class="robo-titulo">Robô de mensagens (bot_infinito.py)</div>
+          <div class="robo-subtitulo">Roda no servidor local e chama monitor_mensagens.py em loop contínuo.</div>
+        </div>
+        <span class="robo-pill parado" id="roboPill"><span class="dot"></span><span id="roboPillTexto">Verificando...</span></span>
+      </div>
+
+      <div class="robo-acoes">
+        <button class="monitor-btn" id="btnIniciar" type="button">Iniciar robô</button>
+        <button class="monitor-btn" id="btnParar" type="button" disabled>Parar robô</button>
+      </div>
+
+      <div class="robo-info" id="roboInfo"></div>
+      <div class="status-msg" id="roboStatusMsg" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="log-panel">
+      <div class="log-panel-header">Saída do robô</div>
+      <pre class="log-output" id="logOutput">Aguardando início do robô...</pre>
+    </div>
+
+    </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      label.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const saved = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    const roboPill = document.getElementById('roboPill');
+    const roboPillTexto = document.getElementById('roboPillTexto');
+    const roboInfo = document.getElementById('roboInfo');
+    const roboStatusMsg = document.getElementById('roboStatusMsg');
+    const btnIniciar = document.getElementById('btnIniciar');
+    const btnParar = document.getElementById('btnParar');
+    const logOutput = document.getElementById('logOutput');
+
+    function formatarDataHora(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('pt-BR');
+    }
+
+    function renderStatus(status) {
+      if (status.rodando) {
+        roboPill.className = 'robo-pill rodando';
+        roboPillTexto.textContent = 'Rodando';
+        roboInfo.textContent = `PID ${status.pid} · iniciado em ${formatarDataHora(status.iniciadoEm)}`;
+        btnIniciar.disabled = true;
+        btnParar.disabled = false;
+      } else {
+        roboPill.className = 'robo-pill parado';
+        roboPillTexto.textContent = 'Parado';
+        roboInfo.textContent = '';
+        btnIniciar.disabled = false;
+        btnParar.disabled = true;
+      }
+    }
+
+    async function atualizarStatus() {
+      try {
+        const resp = await fetch('/api/robo/status');
+        const status = await resp.json();
+        renderStatus(status);
+      } catch (erro) {
+        roboStatusMsg.textContent = 'Não foi possível consultar o status do robô.';
+        roboStatusMsg.classList.add('error');
+      }
+    }
+
+    async function atualizarLog() {
+      try {
+        const resp = await fetch('/api/robo/log');
+        const { linhas } = await resp.json();
+        const estavaNoFim = logOutput.scrollTop + logOutput.clientHeight >= logOutput.scrollHeight - 10;
+        logOutput.textContent = linhas.length ? linhas.join('\n') : 'Nenhuma saída ainda.';
+        if (estavaNoFim) logOutput.scrollTop = logOutput.scrollHeight;
+      } catch (erro) {
+        // silencioso: o polling de status já reporta o problema de conexão
+      }
+    }
+
+    btnIniciar.addEventListener('click', async () => {
+      btnIniciar.disabled = true;
+      roboStatusMsg.textContent = '';
+      roboStatusMsg.classList.remove('error');
+      try {
+        const resp = await fetch('/api/robo/iniciar', { method: 'POST' });
+        const dado = await resp.json();
+        if (!resp.ok) {
+          roboStatusMsg.textContent = dado.erro || 'Não foi possível iniciar o robô.';
+          roboStatusMsg.classList.add('error');
+        }
+      } catch (erro) {
+        roboStatusMsg.textContent = 'Não foi possível iniciar o robô.';
+        roboStatusMsg.classList.add('error');
+      }
+      atualizarStatus();
+    });
+
+    btnParar.addEventListener('click', async () => {
+      btnParar.disabled = true;
+      roboStatusMsg.textContent = '';
+      roboStatusMsg.classList.remove('error');
+      try {
+        const resp = await fetch('/api/robo/parar', { method: 'POST' });
+        const dado = await resp.json();
+        if (!resp.ok) {
+          roboStatusMsg.textContent = dado.erro || 'Não foi possível parar o robô.';
+          roboStatusMsg.classList.add('error');
+        }
+      } catch (erro) {
+        roboStatusMsg.textContent = 'Não foi possível parar o robô.';
+        roboStatusMsg.classList.add('error');
+      }
+      atualizarStatus();
+    });
+
+    atualizarStatus();
+    atualizarLog();
+    setInterval(atualizarStatus, 3000);
+    setInterval(atualizarLog, 3000);
+  </script>
+</body>
+</html>
