@@ -46,8 +46,6 @@ TEMPO_CARREGAR_CHROME = 5      # segundos esperando o Chrome abrir
 TEMPO_CARREGAR_PAGINA = 15     # segundos esperando a página carregar
 TEMPO_ABRIR_MENSAGENS = 5      # segundos esperando a aba de mensagens carregar
 
-TEMPO_ABRIR_MENSAGENS = 5      # segundos esperando a aba de mensagens carregar
-
 # O mouse não será mais utilizado! Usaremos Selenium puro para cliques em background.
 
 def carregar_credenciais_supabase():
@@ -183,7 +181,7 @@ def processar_lista_licitacoes(ids_monitorados):
     if total == 0:
         return
         
-    print(f"[info] Encontradas {total} licitacoes. Iniciando pipeline concorrente em abas...")
+    print(f"[info] Encontradas {total} licitacoes. Iniciando pipeline concorrente de 2 abas...")
     
     def obter_url(id_c):
         return f"https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra={id_c}"
@@ -191,8 +189,8 @@ def processar_lista_licitacoes(ids_monitorados):
     # Limpa a área de transferência antes de começar
     pyperclip.copy("")
     
-    # 1. Abre os 3 primeiros pregões (ou menos, se houver menos de 3 no total)
-    lote_inicial = min(3, total)
+    # 1. Abre os 2 primeiros pregões (ou menos, se houver menos de 2 no total)
+    lote_inicial = min(2, total)
     for idx in range(lote_inicial):
         item = ids_monitorados[idx]
         id_compra = item["idCompra"]
@@ -206,15 +204,15 @@ def processar_lista_licitacoes(ids_monitorados):
             subprocess.run(f'start chrome "{url}"', shell=True)
         time.sleep(1.0) # delay curto para o Chrome processar a abertura
 
-    # Espera silenciosa inicial para que as 3 abas carreguem em paralelo
+    # Espera silenciosa inicial para que as 2 abas de pregões carreguem em paralelo
     print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento concorrente inicial das páginas...")
     time.sleep(TEMPO_CARREGAR_PAGINA)
 
     posicao = carregar_posicao_botao()
     
-    # Se não houver posição cadastrada, calibra usando a primeira aba
+    # Se não houver posição cadastrada, calibra usando a primeira aba de pregão (Aba 1)
     if not posicao:
-        # Foca a primeira aba
+        # Foca a primeira aba de pregão (Aba 1)
         pyautogui.hotkey('ctrl', '1')
         time.sleep(0.5)
         print("\n" + "="*70)
@@ -236,10 +234,11 @@ def processar_lista_licitacoes(ids_monitorados):
         label = formatar_label(item)
         print(f"\n--- Processando Licitacao {idx + 1} de {total} | ID: {id_compra} | {label} ---")
         
-        # 1. Traz o foco do Chrome para a primeira aba da janela isolada (Ctrl + 1)
+        # 1. Traz o foco do Chrome para a primeira aba de pregão ativa (Aba 1, Ctrl + 1)
         print("[agente] Focando na aba da licitação atual...")
-        pyautogui.hotkey('ctrl', '1')
         time.sleep(0.5)
+        pyautogui.hotkey('ctrl', '1')
+        time.sleep(0.8)
         
         # 2. Clica no botão Mensagens
         print("[agente] Clicando no botão Mensagens...")
@@ -269,9 +268,12 @@ def processar_lista_licitacoes(ids_monitorados):
         # 6. Salva o clipboard bruto imediatamente
         texto_bruto = pyperclip.paste()
         
-        # 7. Abre o próximo pregão da fila (se houver) ANTES de fechar o atual,
-        # garantindo que sempre tenhamos pelo menos 3 abas de pregões na janela
-        abriu_novo = False
+        # 7. Fecha a aba do pregão que acabou de ser processado (Ctrl+W)
+        print("[agente] Fechando aba da licitação processada...")
+        pyautogui.hotkey('ctrl', 'w')
+        time.sleep(0.5)
+        
+        # 8. Abre o próximo pregão da fila (se houver). Ele começará a carregar de fundo
         if proximo_para_abrir < total:
             prox_item = ids_monitorados[proximo_para_abrir]
             prox_id = prox_item["idCompra"]
@@ -280,21 +282,10 @@ def processar_lista_licitacoes(ids_monitorados):
             print(f"[agente] Pré-carregando {prox_label} em nova aba (segundo plano)...")
             subprocess.run(f'start chrome "{prox_url}"', shell=True)
             proximo_para_abrir += 1
-            abriu_novo = True
-            time.sleep(1.0)
+            # Delay robusto de 2.5s para garantir que o Chrome concluiu a mudanca de foco e abertura
+            time.sleep(2.5)
             
-        # 8. Se abrimos o novo pregão, a janela do Chrome focará nele automaticamente no final.
-        # Por isso, precisamos voltar à primeira aba (que ainda é o pregão atual) para fechá-lo.
-        if abriu_novo:
-            pyautogui.hotkey('ctrl', '1')
-            time.sleep(0.5)
-            
-        # 9. Fecha a aba da licitação que acabou de ser processada
-        print("[agente] Fechando aba da licitação processada...")
-        pyautogui.hotkey('ctrl', 'w')
-        time.sleep(0.5)
-        
-        # 10. Processa o texto copiado e faz a chamada de rede para a API/banco
+        # 9. Processa o texto copiado e faz a chamada de rede para a API/banco
         # (Isso consome tempo de rede em segundo plano enquanto as abas seguintes já carregam)
         texto_limpo = extrair_mensagens(texto_bruto)
         if not texto_limpo.strip():
@@ -310,7 +301,6 @@ def processar_lista_licitacoes(ids_monitorados):
             else:
                 print("[aviso] Falha na integracao com a API.")
                 registrar_log(id_compra, "FALHA", "Falha na integracao com a API", label)
-
 
 def main():
     parser = argparse.ArgumentParser(description="Bot de monitoramento de mensagens (Versao PyAutoGUI / Nuvem).")
