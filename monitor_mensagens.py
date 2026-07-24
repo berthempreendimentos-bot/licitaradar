@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 import time
 import subprocess
 import datetime
@@ -21,9 +21,19 @@ API_URL_BASE = f"{base_url}/api/mensagens"
 
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log_atualizacoes.log")
 
-def registrar_log(id_compra, status, detalhe=""):
+def formatar_label(item):
+    uasg = item.get("uasg")
+    numero = item.get("numeroPregao")
+    ano = item.get("anoPregao")
+    if uasg and numero:
+        ano_txt = f"/{ano}" if ano else ""
+        return f"UASG {uasg} — Pregão {numero}{ano_txt}"
+    return f"ID {item['idCompra']}"
+
+def registrar_log(id_compra, status, detalhe="", label=""):
     timestamp = datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-    linha = f"[{timestamp}] Licitacao {id_compra} - {status}"
+    referencia = f"{label} (ID {id_compra})" if label else f"Licitacao {id_compra}"
+    linha = f"[{timestamp}] {referencia} - {status}"
     if detalhe:
         linha += f" - {detalhe}"
     try:
@@ -72,7 +82,7 @@ def obter_licitacoes_supabase_fallback():
     
     url = cred["SUPABASE_URL"]
     key = cred["SUPABASE_SERVICE_KEY"]
-    req_url = f"{url}/rest/v1/pregoes_monitorados?select=id_compra"
+    req_url = f"{url}/rest/v1/pregoes_monitorados?select=id_compra,uasg,numero_pregao,ano_pregao"
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -83,7 +93,15 @@ def obter_licitacoes_supabase_fallback():
         with urllib.request.urlopen(req) as response:
             res_body = response.read().decode()
             res_json = json.loads(res_body)
-            return [item["id_compra"] for item in res_json if "id_compra" in item]
+            return [
+                {
+                    "idCompra": item["id_compra"],
+                    "uasg": item.get("uasg"),
+                    "numeroPregao": item.get("numero_pregao"),
+                    "anoPregao": item.get("ano_pregao"),
+                }
+                for item in res_json if "id_compra" in item
+            ]
     except Exception as e:
         print(f"[erro] Falha ao obter licitacoes diretamente do Supabase: {e}")
         return []
@@ -96,7 +114,15 @@ def obter_licitacoes():
             res_body = response.read().decode()
             res_json = json.loads(res_body)
             itens = res_json.get("itens", [])
-            return [item["idCompra"] for item in itens if "idCompra" in item]
+            return [
+                {
+                    "idCompra": item["idCompra"],
+                    "uasg": item.get("uasg"),
+                    "numeroPregao": item.get("numeroPregao"),
+                    "anoPregao": item.get("anoPregao"),
+                }
+                for item in itens if "idCompra" in item
+            ]
     except Exception as e:
         print(f"[erro] Falha ao obter lista de licitacoes via API: {e}")
         return obter_licitacoes_supabase_fallback()
@@ -152,24 +178,45 @@ def salvar_posicao_botao(x, y):
     with open(arquivo_posicao, 'w') as f:
         json.dump({"x": x, "y": y}, f)
 
-def abrir_chrome_e_processar(url, id_compra):
-    print(f"[agente] Acessando {url} (abrindo no Chrome padrão)...")
+def processar_lista_licitacoes(ids_monitorados):
+    total = len(ids_monitorados)
+    if total == 0:
+        return
+        
+    print(f"[info] Encontradas {total} licitacoes. Iniciando pipeline concorrente em abas...")
     
-    posicao = carregar_posicao_botao()
+    def obter_url(id_c):
+        return f"https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra={id_c}"
 
     # Limpa a área de transferência antes de começar
     pyperclip.copy("")
+    
+    # 1. Abre os 3 primeiros pregões (ou menos, se houver menos de 3 no total)
+    lote_inicial = min(3, total)
+    for idx in range(lote_inicial):
+        item = ids_monitorados[idx]
+        id_compra = item["idCompra"]
+        label = formatar_label(item)
+        url = obter_url(id_compra)
+        if idx == 0:
+            print(f"[agente] Abrindo {label} em nova janela isolada...")
+            subprocess.run(f'start chrome --new-window "{url}"', shell=True)
+        else:
+            print(f"[agente] Abrindo {label} em nova aba...")
+            subprocess.run(f'start chrome "{url}"', shell=True)
+        time.sleep(1.0) # delay curto para o Chrome processar a abertura
 
-    # Abre o Chrome oficial do usuário
-    subprocess.run(f'start chrome "{url}"', shell=True)
-
-    # Espera o carregamento da página de forma totalmente silenciosa
-    print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento silencioso da página...")
+    # Espera silenciosa inicial para que as 3 abas carreguem em paralelo
+    print(f"[agente] Aguardando {TEMPO_CARREGAR_PAGINA}s o carregamento concorrente inicial das páginas...")
     time.sleep(TEMPO_CARREGAR_PAGINA)
 
-
-
+    posicao = carregar_posicao_botao()
+    
+    # Se não houver posição cadastrada, calibra usando a primeira aba
     if not posicao:
+        # Foca a primeira aba
+        pyautogui.hotkey('ctrl', '1')
+        time.sleep(0.5)
         print("\n" + "="*70)
         print("PRIMEIRA EXECUÇÃO: CONFIGURAÇÃO DO CLIQUE")
         print("A página já deve ter carregado. Role até achar o botão 'Mensagens'")
@@ -180,61 +227,96 @@ def abrir_chrome_e_processar(url, id_compra):
         print(f"[agente] Posição do mouse capturada: X={x}, Y={y}. Salvando para as próximas vezes.")
         salvar_posicao_botao(x, y)
         posicao = {"x": x, "y": y}
-    
-    # Clica no botão Mensagens
-    print("[agente] Clicando no botão Mensagens...")
-    pyautogui.click(x=posicao["x"], y=posicao["y"])
-    
-    # Espera silenciosamente a aba de mensagens abrir e carregar
-    print(f"[agente] Aguardando {TEMPO_ABRIR_MENSAGENS}s o carregamento silencioso da aba de mensagens...")
-    time.sleep(TEMPO_ABRIR_MENSAGENS)
-    
-    # Garante o foco na janela ativa do Chrome clicando no centro da tela antes de copiar
-    print("[agente] Focando no Chrome e copiando mensagens (Ctrl+A, Ctrl+C)...")
-    try:
-        width, height = pyautogui.size()
-        pyautogui.click(x=width // 2, y=height // 2)
-        time.sleep(0.5)
-    except Exception as e:
-        print(f"[aviso] Não foi possível clicar no centro da tela para focar: {e}")
-        
-    pyautogui.hotkey('ctrl', 'a')
-    time.sleep(0.5)
-    pyautogui.hotkey('ctrl', 'c')
-    time.sleep(1.0)
-    
-    # Fechar a aba do navegador
-    print("[agente] Fechando aba (Ctrl+W)...")
-    pyautogui.hotkey('ctrl', 'w')
-    time.sleep(0.5)
-    
-    texto_bruto = pyperclip.paste()
-    
-    texto_limpo = extrair_mensagens(texto_bruto)
-    
-    if not texto_limpo.strip():
-        print("ERRO: Nenhuma mensagem detectada. Talvez a pagina nao tenha carregado as mensagens a tempo.")
-        registrar_log(id_compra, "FALHA", "Nenhuma mensagem detectada na pagina")
-    else:
-        resultado_api = enviar_para_api(texto_limpo, id_compra)
-        if resultado_api and resultado_api.get("ok"):
-            tot = resultado_api.get('total', 0)
-            novas = resultado_api.get('novas', 0)
-            print(f"[ok] A aplicacao encontrou {tot} msgs no total. {novas} novas salvas!")
-            registrar_log(id_compra, "OK", f"{tot} msgs no total, {novas} novas")
-        else:
-            print("[aviso] Falha na integracao com a API.")
-            registrar_log(id_compra, "FALHA", "Falha na integracao com a API")
 
-def processar_licitacao(id_compra):
-    url_licitacao = f"https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra={id_compra}"
-    abrir_chrome_e_processar(url_licitacao, id_compra)
+    # Controla qual será o próximo pregão a ser pré-carregado no Chrome
+    proximo_para_abrir = lote_inicial
+
+    for idx, item in enumerate(ids_monitorados):
+        id_compra = item["idCompra"]
+        label = formatar_label(item)
+        print(f"\n--- Processando Licitacao {idx + 1} de {total} | ID: {id_compra} | {label} ---")
+        
+        # 1. Traz o foco do Chrome para a primeira aba da janela isolada (Ctrl + 1)
+        print("[agente] Focando na aba da licitação atual...")
+        pyautogui.hotkey('ctrl', '1')
+        time.sleep(0.5)
+        
+        # 2. Clica no botão Mensagens
+        print("[agente] Clicando no botão Mensagens...")
+        pyautogui.click(x=posicao["x"], y=posicao["y"])
+        
+        # 3. Espera silenciosamente a aba de mensagens carregar (4s de segurança)
+        time.sleep(4.0)
+        
+        # 4. Foca no chat e copia as mensagens (Ctrl+A, Ctrl+C)
+        print("[agente] Copiando mensagens...")
+        try:
+            width, height = pyautogui.size()
+            pyautogui.click(x=width // 2, y=height // 2)
+            time.sleep(0.5)
+        except Exception as e:
+            pass
+            
+        pyautogui.hotkey('ctrl', 'a')
+        time.sleep(0.5)
+        pyautogui.hotkey('ctrl', 'c')
+        time.sleep(1.0)
+        
+        # 5. Fecha a aba de mensagens (Ctrl+W)
+        pyautogui.hotkey('ctrl', 'w')
+        time.sleep(0.5)
+        
+        # 6. Salva o clipboard bruto imediatamente
+        texto_bruto = pyperclip.paste()
+        
+        # 7. Abre o próximo pregão da fila (se houver) ANTES de fechar o atual,
+        # garantindo que sempre tenhamos pelo menos 3 abas de pregões na janela
+        abriu_novo = False
+        if proximo_para_abrir < total:
+            prox_item = ids_monitorados[proximo_para_abrir]
+            prox_id = prox_item["idCompra"]
+            prox_label = formatar_label(prox_item)
+            prox_url = obter_url(prox_id)
+            print(f"[agente] Pré-carregando {prox_label} em nova aba (segundo plano)...")
+            subprocess.run(f'start chrome "{prox_url}"', shell=True)
+            proximo_para_abrir += 1
+            abriu_novo = True
+            time.sleep(1.0)
+            
+        # 8. Se abrimos o novo pregão, a janela do Chrome focará nele automaticamente no final.
+        # Por isso, precisamos voltar à primeira aba (que ainda é o pregão atual) para fechá-lo.
+        if abriu_novo:
+            pyautogui.hotkey('ctrl', '1')
+            time.sleep(0.5)
+            
+        # 9. Fecha a aba da licitação que acabou de ser processada
+        print("[agente] Fechando aba da licitação processada...")
+        pyautogui.hotkey('ctrl', 'w')
+        time.sleep(0.5)
+        
+        # 10. Processa o texto copiado e faz a chamada de rede para a API/banco
+        # (Isso consome tempo de rede em segundo plano enquanto as abas seguintes já carregam)
+        texto_limpo = extrair_mensagens(texto_bruto)
+        if not texto_limpo.strip():
+            print("ERRO: Nenhuma mensagem detectada. Talvez a pagina nao tenha carregado as mensagens a tempo.")
+            registrar_log(id_compra, "FALHA", "Nenhuma mensagem detectada na pagina", label)
+        else:
+            resultado_api = enviar_para_api(texto_limpo, id_compra)
+            if resultado_api and resultado_api.get("ok"):
+                tot = resultado_api.get('total', 0)
+                novas = resultado_api.get('novas', 0)
+                print(f"[ok] A aplicacao encontrou {tot} msgs no total. {novas} novas salvas!")
+                registrar_log(id_compra, "OK", f"{tot} msgs no total, {novas} novas", label)
+            else:
+                print("[aviso] Falha na integracao com a API.")
+                registrar_log(id_compra, "FALHA", "Falha na integracao com a API", label)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Bot de monitoramento de mensagens (Versao PyAutoGUI / Nuvem).")
     parser.add_argument("--id", type=str, help="ID da licitacao especifica para verificar.")
     parser.add_argument("--no-wait", action="store_true", help="Ignora a espera de recalibracao e usa as coordenadas salvas imediatamente.")
+    parser.add_argument("--resume-id", type=str, help="ID da licitacao onde a varredura anterior parou. A lista sera reordenada para continuar a partir dela.")
     args = parser.parse_args()
 
     # Verifica se deseja recalibrar as coordenadas do botão
@@ -278,7 +360,7 @@ def main():
 
 
     if args.id:
-        ids_monitorados = [args.id]
+        ids_monitorados = [{"idCompra": args.id, "uasg": None, "numeroPregao": None, "anoPregao": None}]
         print(f"[info] Rodando para um unico ID especifico via argumento: {args.id}")
     else:
         ids_monitorados = obter_licitacoes()
@@ -286,14 +368,17 @@ def main():
     if not ids_monitorados:
         print("[erro] Nenhuma licitacao retornada pela API ou a API esta offline.")
         return
-        
-    print(f"[info] Encontradas {len(ids_monitorados)} licitacoes. Iniciando automacao fisica...")
-    
-    for index, id_compra in enumerate(ids_monitorados, start=1):
-        print(f"\n--- Processando Licitacao {index} de {len(ids_monitorados)} (ID: {id_compra}) ---")
-        processar_licitacao(id_compra)
-        print("-" * 40)
-        
+
+    if args.resume_id:
+        indices = [i for i, item in enumerate(ids_monitorados) if str(item["idCompra"]) == str(args.resume_id)]
+        if indices:
+            idx = indices[0]
+            ids_monitorados = ids_monitorados[idx:] + ids_monitorados[:idx]
+            print(f"[info] Retomando varredura anterior a partir da licitacao ID: {args.resume_id}")
+        else:
+            print(f"[aviso] ID de retomada {args.resume_id} nao encontrado na lista atual. Iniciando do começo.")
+
+    processar_lista_licitacoes(ids_monitorados)
     print("\n[bot] PROCESSAMENTO FINALIZADO.")
 
 if __name__ == "__main__":
