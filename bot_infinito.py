@@ -7,6 +7,7 @@ import os
 import re
 import json
 import threading
+import queue
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -19,6 +20,7 @@ INTERVALO_MINUTOS = 5
 DIR_ATUAL = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(DIR_ATUAL, "estado_execucao.json")
 LOG_FILE = os.path.join(DIR_ATUAL, "log_atualizacoes.log")
+HISTORICO_STATUS_FILE = os.path.join(DIR_ATUAL, "historico_status.log")
 
 HORA_INICIO = datetime.datetime.now()
 HORA_PARADA = None
@@ -28,9 +30,18 @@ estado = {
     "ultima_atualizacao": "-",
     "varredura_num": 0,
     "total_licitacoes": 0,
+    "total_normais": 0,
+    "total_favoritas": 0,
     "total_ok": 0,
     "total_falhas": 0,
+    "total_revogadas": 0,
+    "total_normais_processadas": 0,
+    "total_favoritas_processadas": 0,
     "tempo_ativo": "00:00:00",
+    "tempo_medio_licitacao": "-",
+    "ultimo_tempo_licitacao": "-",
+    "_soma_tempo_licitacoes": 0.0,
+    "_contador_tempo_licitacoes": 0,
 }
 estado_lock = threading.Lock()
 
@@ -87,17 +98,52 @@ def limpar_estado_resumo():
             pass
 
 
+def registrar_historico_status(evento):
+    with estado_lock:
+        snapshot = {k: v for k, v in estado.items() if not k.startswith("_")}
+    registro = {
+        "evento": evento,
+        "timestamp": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        **snapshot,
+    }
+    try:
+        with open(HISTORICO_STATUS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(registro, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"[aviso] Nao foi possivel salvar o historico de status: {e}")
+
+
 def solicitar_parada():
     global HORA_PARADA
     stop_event.set()
     HORA_PARADA = datetime.datetime.now()
     atualizar_estado(status="Parando o robô...")
+    registrar_historico_status("parada")
     with processo_lock:
         if processo_atual is not None:
+            # taskkill /T mata a arvore inteira de processos (o script e quaisquer
+            # processos filhos), garantindo que o pipe de stdout feche na hora e o
+            # worker_loop nao fique preso esperando saida do processo antigo.
             try:
-                processo_atual.terminate()
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(processo_atual.pid)],
+                    capture_output=True,
+                )
             except Exception:
-                pass
+                try:
+                    processo_atual.kill()
+                except Exception:
+                    pass
+
+
+def _ler_saida_processo(processo, fila):
+    try:
+        for linha in processo.stdout:
+            fila.put(linha)
+    except Exception:
+        pass
+    finally:
+        fila.put(None)
 
 
 def worker_loop():
@@ -132,17 +178,30 @@ def worker_loop():
             with processo_lock:
                 processo_atual = processo
 
-            for linha in processo.stdout:
-                if stop_event.is_set():
+            fila_linhas = queue.Queue()
+            threading.Thread(target=_ler_saida_processo, args=(processo, fila_linhas), daemon=True).start()
+
+            while not stop_event.is_set():
+                try:
+                    linha = fila_linhas.get(timeout=0.2)
+                except queue.Empty:
+                    continue
+                if linha is None:
                     break
 
                 linha = linha.rstrip("\n")
                 if linha:
                     print(linha)
 
-                match_total = re.search(r'Encontradas (\d+) licitacoes', linha)
-                if match_total:
-                    atualizar_estado(total_licitacoes=int(match_total.group(1)))
+                match_contagem = re.search(r'Encontradas (\d+) licitacoes normais e (\d+) favoritas', linha)
+                if match_contagem:
+                    qtd_normais = int(match_contagem.group(1))
+                    qtd_favoritas = int(match_contagem.group(2))
+                    atualizar_estado(
+                        total_normais=qtd_normais,
+                        total_favoritas=qtd_favoritas,
+                        total_licitacoes=qtd_normais + qtd_favoritas,
+                    )
                     continue
 
                 match_lic = re.search(r'Processando Licitacao (\d+) de (\d+) \| ID: (\S+) \| (.+) ---', linha)
@@ -166,6 +225,26 @@ def worker_loop():
                     with estado_lock:
                         estado["total_falhas"] += 1
                     atualizar_tabela(id_atual, "FALHA", linha)
+                    continue
+
+                if linha.startswith("[revogada]") and id_atual:
+                    with estado_lock:
+                        estado["total_revogadas"] += 1
+                    atualizar_tabela(id_atual, "REVOGADA", linha[len("[revogada] "):])
+                    continue
+
+                match_tempo = re.search(r'\[tempo\] Licitacao \S+ \((normal|favorita)\) processada em ([\d.]+)s', linha)
+                if match_tempo:
+                    tipo_tempo = match_tempo.group(1)
+                    tempo_gasto = float(match_tempo.group(2))
+                    with estado_lock:
+                        estado["_soma_tempo_licitacoes"] += tempo_gasto
+                        estado["_contador_tempo_licitacoes"] += 1
+                        media = estado["_soma_tempo_licitacoes"] / estado["_contador_tempo_licitacoes"]
+                        estado["tempo_medio_licitacao"] = f"{media:.1f}s"
+                        estado["ultimo_tempo_licitacao"] = f"{tempo_gasto:.1f}s"
+                        chave_processadas = "total_normais_processadas" if tipo_tempo == "normal" else "total_favoritas_processadas"
+                        estado[chave_processadas] += 1
                     continue
 
             processo.wait()
@@ -224,7 +303,7 @@ def baixar_relatorio_erros():
 def criar_janela():
     root = tk.Tk()
     root.title("Robô ComprasNet - Painel de Status")
-    root.geometry("560x600+40+40")
+    root.geometry("560x790+40+40")
     root.attributes("-topmost", True)
     root.configure(bg="#111827")
     root.resizable(False, False)
@@ -281,9 +360,16 @@ def criar_janela():
     lbl_ultima_atualizacao = linha("Última atualização:")
     lbl_varredura = linha("Varredura nº:")
     lbl_total = linha("Licitações monitoradas:")
+    lbl_normais = linha("— Normais:")
+    lbl_favoritas = linha("— ★ Favoritas:")
     lbl_ok = linha("Total OK:")
     lbl_falhas = linha("Total falhas:")
+    lbl_revogadas = linha("Revogadas (auto):")
     lbl_tempo_ativo = linha("Tempo em funcionamento:")
+    lbl_tempo_medio = linha("Tempo médio/licitação:")
+    lbl_ultimo_tempo = linha("Última licitação:")
+    lbl_normais_processadas = linha("— Normais monitoradas:")
+    lbl_favoritas_processadas = linha("— ★ Favoritas monitoradas:")
 
     tk.Label(
         root, text="Licitações monitoradas nesta varredura",
@@ -325,6 +411,7 @@ def criar_janela():
     tabela.tag_configure("ok", foreground="#4ade80")
     tabela.tag_configure("falha", foreground="#f87171")
     tabela.tag_configure("processando", foreground="#facc15")
+    tabela.tag_configure("revogada", foreground="#fb923c")
 
     def atualizar_gui():
         with estado_lock:
@@ -332,8 +419,15 @@ def criar_janela():
             lbl_ultima_atualizacao.config(text=estado["ultima_atualizacao"])
             lbl_varredura.config(text=str(estado["varredura_num"]))
             lbl_total.config(text=str(estado["total_licitacoes"]))
+            lbl_normais.config(text=str(estado["total_normais"]))
+            lbl_favoritas.config(text=str(estado["total_favoritas"]))
             lbl_ok.config(text=str(estado["total_ok"]))
             lbl_falhas.config(text=str(estado["total_falhas"]))
+            lbl_revogadas.config(text=str(estado["total_revogadas"]))
+            lbl_tempo_medio.config(text=estado["tempo_medio_licitacao"])
+            lbl_ultimo_tempo.config(text=estado["ultimo_tempo_licitacao"])
+            lbl_normais_processadas.config(text=str(estado["total_normais_processadas"]))
+            lbl_favoritas_processadas.config(text=str(estado["total_favoritas_processadas"]))
 
         fim_contagem = HORA_PARADA if HORA_PARADA else datetime.datetime.now()
         decorrido = fim_contagem - HORA_INICIO
@@ -347,7 +441,7 @@ def criar_janela():
 
         existentes = set(tabela.get_children())
         for id_compra, info in copia.items():
-            tag = {"OK": "ok", "FALHA": "falha", "Processando...": "processando"}.get(info["status"], "")
+            tag = {"OK": "ok", "FALHA": "falha", "Processando...": "processando", "REVOGADA": "revogada"}.get(info["status"], "")
             valores = (info["label"], info["status"], info["horario"], info["detalhe"])
             if id_compra in existentes:
                 tabela.item(id_compra, values=valores, tags=(tag,))
@@ -367,6 +461,13 @@ def criar_janela():
 
         root.after(500, atualizar_gui)
 
+    def ao_fechar_janela():
+        if not stop_event.is_set():
+            solicitar_parada()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", ao_fechar_janela)
+
     atualizar_gui()
     root.mainloop()
 
@@ -380,6 +481,8 @@ def main():
     print("Este terminal deve permanecer aberto para puxar ordens da nuvem.")
     print("Uma janela de status foi aberta e ficará sempre visível na tela.")
     print("=" * 60)
+
+    registrar_historico_status("inicio")
 
     thread_worker = threading.Thread(target=worker_loop, daemon=True)
     thread_worker.start()

@@ -367,6 +367,33 @@ app.patch('/api/monitorados/:idCompra/favorito', async (req, res) => {
   }
 });
 
+// Usado pelo bot (monitor_mensagens.py) quando a pagina do pregao nao abre o chat de
+// mensagens e mostra a tela "Informacoes adicionais da compra" - isso indica que a
+// licitacao foi revogada/encerrada, entao a situacao e marcada para sair da varredura.
+app.patch('/api/monitorados/:idCompra/situacao', async (req, res) => {
+  const { idCompra } = req.params;
+  const situacao = String((req.body || {}).situacao || '').trim();
+
+  if (!situacao) {
+    return res.status(400).json({ erro: 'Informe a situacao.' });
+  }
+
+  try {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('pregoes_monitorados')
+      .update({ situacao, atualizado_em: new Date().toISOString() })
+      .eq('id_compra', idCompra);
+
+    if (error) throw error;
+
+    res.json({ ok: true, situacao });
+  } catch (erro) {
+    console.error('Erro ao atualizar situacao no Supabase:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível atualizar a situação agora.' });
+  }
+});
+
 app.delete('/api/monitorados/:idCompra', async (req, res) => {
   const { idCompra } = req.params;
 
@@ -465,6 +492,19 @@ app.post('/api/mensagens/:idCompra', async (req, res) => {
 
     const novas = (salvas || []).filter((m) => !jaExistiaSet.has(chave(m)));
     const alertasGerados = await verificarPalavrasChave(supabase, idCompra, novas);
+
+    // Toda licitação que tiver uma mensagem batendo com palavra-chave monitorada
+    // vira favorita automaticamente (evita escrita à toa se já era favorita).
+    if (alertasGerados.length > 0) {
+      const { error: erroFavorito } = await supabase
+        .from('pregoes_monitorados')
+        .update({ favorito: true, atualizado_em: new Date().toISOString() })
+        .eq('id_compra', idCompra)
+        .eq('favorito', false);
+      if (erroFavorito) {
+        console.error('Erro ao marcar favorito automaticamente:', erroFavorito.message);
+      }
+    }
 
     if (alertasGerados.length > 0) {
       try {

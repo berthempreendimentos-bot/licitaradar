@@ -44,7 +44,14 @@ def registrar_log(id_compra, status, detalhe="", label=""):
 
 TEMPO_CARREGAR_CHROME = 5      # segundos esperando o Chrome abrir
 TEMPO_CARREGAR_PAGINA = 15     # segundos esperando a página carregar
-TEMPO_ABRIR_MENSAGENS = 5      # segundos esperando a aba de mensagens carregar
+TEMPO_ABRIR_MENSAGENS = 2.5    # segundos esperando a aba de mensagens carregar
+
+# Mesma lista usada em monitoramento.html (SITUACOES_ALERTA) para identificar licitacoes encerradas.
+SITUACOES_ENCERRADAS = ['anulad', 'revogad', 'suspens', 'fracassad', 'desert', 'cancelad']
+
+def esta_encerrada(situacao):
+    s = (situacao or '').lower()
+    return any(termo in s for termo in SITUACOES_ENCERRADAS)
 
 # O mouse não será mais utilizado! Usaremos Selenium puro para cliques em background.
 
@@ -80,7 +87,7 @@ def obter_licitacoes_supabase_fallback():
     
     url = cred["SUPABASE_URL"]
     key = cred["SUPABASE_SERVICE_KEY"]
-    req_url = f"{url}/rest/v1/pregoes_monitorados?select=id_compra,uasg,numero_pregao,ano_pregao"
+    req_url = f"{url}/rest/v1/pregoes_monitorados?select=id_compra,uasg,numero_pregao,ano_pregao,favorito,situacao"
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -97,6 +104,8 @@ def obter_licitacoes_supabase_fallback():
                     "uasg": item.get("uasg"),
                     "numeroPregao": item.get("numero_pregao"),
                     "anoPregao": item.get("ano_pregao"),
+                    "favorito": bool(item.get("favorito")),
+                    "situacao": item.get("situacao"),
                 }
                 for item in res_json if "id_compra" in item
             ]
@@ -118,6 +127,8 @@ def obter_licitacoes():
                     "uasg": item.get("uasg"),
                     "numeroPregao": item.get("numeroPregao"),
                     "anoPregao": item.get("anoPregao"),
+                    "favorito": bool(item.get("favorito")),
+                    "situacao": item.get("situacao"),
                 }
                 for item in itens if "idCompra" in item
             ]
@@ -161,6 +172,23 @@ def enviar_para_api(texto_limpo, id_compra):
         print(f"[erro] Falha de conexao com a API: {e}")
         return None
 
+# Quando a compra nao tem chat de mensagens disponivel, o ComprasNet mostra essa tela
+# de "Informacoes adicionais da compra" em vez do painel de mensagens. Na pratica isso
+# so acontece com compras encerradas (revogadas/canceladas/etc), entao o bot marca a
+# situacao como Revogada para que a licitacao saia da varredura a partir da proxima vez.
+MARCADOR_SEM_CHAT = "Informações adicionais da compra"
+
+def marcar_como_revogada(id_compra):
+    url = f"{base_url}/api/monitorados/{id_compra}/situacao"
+    data = json.dumps({"situacao": "Revogada (detectada automaticamente)"}).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='PATCH')
+    try:
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read().decode())
+    except Exception as e:
+        print(f"[erro] Falha ao marcar licitacao como revogada: {e}")
+        return None
+
 def carregar_posicao_botao():
     arquivo_posicao = os.path.join(os.path.dirname(os.path.abspath(__file__)), "posicao_botao.json")
     if os.path.exists(arquivo_posicao):
@@ -176,13 +204,40 @@ def salvar_posicao_botao(x, y):
     with open(arquivo_posicao, 'w') as f:
         json.dump({"x": x, "y": y}, f)
 
+def mesclar_normais_favoritas(normais, favoritas):
+    # Intercala 1 normal + 1 favorita, sempre mantendo esse padrao pelo resto da
+    # varredura. Como normalmente ha muito menos favoritas que normais, as favoritas
+    # sao revisitadas em ciclo (voltam para a primeira quando a lista acaba) - assim
+    # elas continuam sendo analisadas repetidamente junto de cada normal nova aberta,
+    # em vez de sumir da intercalacao assim que a lista de favoritas se esgota.
+    if not favoritas:
+        return list(normais)
+    if not normais:
+        return list(favoritas)
+
+    mesclado = []
+    for i, normal in enumerate(normais):
+        mesclado.append(normal)
+        mesclado.append(favoritas[i % len(favoritas)])
+    return mesclado
+
 def processar_lista_licitacoes(ids_monitorados):
+    total_recebido = len(ids_monitorados)
+    ids_monitorados = [item for item in ids_monitorados if not esta_encerrada(item.get("situacao"))]
+    ignoradas = total_recebido - len(ids_monitorados)
+    if ignoradas:
+        print(f"[info] Ignorando {ignoradas} licitacoes encerradas (suspensa/revogada/anulada/etc) da varredura.")
+
+    normais = [item for item in ids_monitorados if not item.get("favorito")]
+    favoritas = [item for item in ids_monitorados if item.get("favorito")]
+    ids_monitorados = mesclar_normais_favoritas(normais, favoritas)
+
     total = len(ids_monitorados)
     if total == 0:
         return
-        
-    print(f"[info] Encontradas {total} licitacoes. Iniciando pipeline concorrente de 2 abas...")
-    
+
+    print(f"[info] Encontradas {len(normais)} licitacoes normais e {len(favoritas)} favoritas. Iniciando pipeline mesclado de 2 abas...")
+
     def obter_url(id_c):
         return f"https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra={id_c}"
 
@@ -231,76 +286,89 @@ def processar_lista_licitacoes(ids_monitorados):
 
     for idx, item in enumerate(ids_monitorados):
         id_compra = item["idCompra"]
+        tipo = "favorita" if item.get("favorito") else "normal"
         label = formatar_label(item)
-        print(f"\n--- Processando Licitacao {idx + 1} de {total} | ID: {id_compra} | {label} ---")
-        
+        label_exibicao = f"★ {label}" if tipo == "favorita" else label
+        print(f"\n--- Processando Licitacao {idx + 1} de {total} | ID: {id_compra} | {label_exibicao} ---")
+        inicio_item = time.time()
+
         # 1. Traz o foco do Chrome para a primeira aba de pregão ativa (Aba 1, Ctrl + 1)
         print("[agente] Focando na aba da licitação atual...")
-        time.sleep(0.5)
+        time.sleep(0.3)
         pyautogui.hotkey('ctrl', '1')
-        time.sleep(0.8)
-        
+        time.sleep(0.5)
+
         # 2. Clica no botão Mensagens
         print("[agente] Clicando no botão Mensagens...")
         pyautogui.click(x=posicao["x"], y=posicao["y"])
-        
-        # 3. Espera silenciosamente a aba de mensagens carregar (4s de segurança)
-        time.sleep(4.0)
-        
+
+        # 3. Espera silenciosamente a aba de mensagens carregar
+        time.sleep(TEMPO_ABRIR_MENSAGENS)
+
         # 4. Foca no chat e copia as mensagens (Ctrl+A, Ctrl+C)
         print("[agente] Copiando mensagens...")
         try:
             width, height = pyautogui.size()
             pyautogui.click(x=width // 2, y=height // 2)
-            time.sleep(0.5)
+            time.sleep(0.3)
         except Exception as e:
             pass
-            
+
         pyautogui.hotkey('ctrl', 'a')
-        time.sleep(0.5)
+        time.sleep(0.3)
         pyautogui.hotkey('ctrl', 'c')
-        time.sleep(1.0)
-        
-        # 5. Fecha a aba de mensagens (Ctrl+W)
-        pyautogui.hotkey('ctrl', 'w')
-        time.sleep(0.5)
-        
-        # 6. Salva o clipboard bruto imediatamente
+        time.sleep(0.6)
+
+        # 5. Salva o clipboard bruto imediatamente
         texto_bruto = pyperclip.paste()
-        
-        # 7. Fecha a aba do pregão que acabou de ser processado (Ctrl+W)
+
+        # 6. Fecha a aba da licitação processada (Ctrl+W). As mensagens abrem na mesma
+        # aba do pregão (nao em aba separada), entao um unico fechamento e suficiente -
+        # um segundo Ctrl+W aqui fecharia a aba seguinte (ou a janela, se so sobrar uma).
         print("[agente] Fechando aba da licitação processada...")
         pyautogui.hotkey('ctrl', 'w')
-        time.sleep(0.5)
+        time.sleep(0.3)
         
-        # 8. Abre o próximo pregão da fila (se houver). Ele começará a carregar de fundo
+        # 7. Processa o texto copiado e faz a chamada de rede para a API/banco
+        if MARCADOR_SEM_CHAT in texto_bruto:
+            # A pagina nao abriu o chat de mensagens (mostrou a tela de informacoes da
+            # compra) - isso indica que a licitacao foi revogada/encerrada. Marca a
+            # situacao no banco para ela sair da varredura a partir da proxima vez.
+            print(f"[revogada] {label} (ID {id_compra}) sem chat de mensagens - marcada como revogada e removida da varredura.")
+            marcar_como_revogada(id_compra)
+            registrar_log(id_compra, "REVOGADA", "Sem chat de mensagens (tela de informacoes da compra)", label)
+        else:
+            texto_limpo = extrair_mensagens(texto_bruto)
+            if not texto_limpo.strip():
+                print("ERRO: Nenhuma mensagem detectada. Talvez a pagina nao tenha carregado as mensagens a tempo.")
+                registrar_log(id_compra, "FALHA", "Nenhuma mensagem detectada na pagina", label)
+            else:
+                resultado_api = enviar_para_api(texto_limpo, id_compra)
+                if resultado_api and resultado_api.get("ok"):
+                    tot = resultado_api.get('total', 0)
+                    novas = resultado_api.get('novas', 0)
+                    print(f"[ok] A aplicacao encontrou {tot} msgs no total. {novas} novas salvas!")
+                    registrar_log(id_compra, "OK", f"{tot} msgs no total, {novas} novas", label)
+                else:
+                    print("[aviso] Falha na integracao com a API.")
+                    registrar_log(id_compra, "FALHA", "Falha na integracao com a API", label)
+
+        # 8. Abre o próximo pregão da fila (se houver), somente apos a analise da aba anterior
         if proximo_para_abrir < total:
             prox_item = ids_monitorados[proximo_para_abrir]
             prox_id = prox_item["idCompra"]
             prox_label = formatar_label(prox_item)
+            prox_tipo = "favorita" if prox_item.get("favorito") else "normal"
             prox_url = obter_url(prox_id)
-            print(f"[agente] Pré-carregando {prox_label} em nova aba (segundo plano)...")
+            print(f"[agente] Pré-carregando {prox_label} ({prox_tipo}) em nova aba (segundo plano)...")
             subprocess.run(f'start chrome "{prox_url}"', shell=True)
             proximo_para_abrir += 1
-            # Delay robusto de 2.5s para garantir que o Chrome concluiu a mudanca de foco e abertura
-            time.sleep(2.5)
-            
-        # 9. Processa o texto copiado e faz a chamada de rede para a API/banco
-        # (Isso consome tempo de rede em segundo plano enquanto as abas seguintes já carregam)
-        texto_limpo = extrair_mensagens(texto_bruto)
-        if not texto_limpo.strip():
-            print("ERRO: Nenhuma mensagem detectada. Talvez a pagina nao tenha carregado as mensagens a tempo.")
-            registrar_log(id_compra, "FALHA", "Nenhuma mensagem detectada na pagina", label)
-        else:
-            resultado_api = enviar_para_api(texto_limpo, id_compra)
-            if resultado_api and resultado_api.get("ok"):
-                tot = resultado_api.get('total', 0)
-                novas = resultado_api.get('novas', 0)
-                print(f"[ok] A aplicacao encontrou {tot} msgs no total. {novas} novas salvas!")
-                registrar_log(id_compra, "OK", f"{tot} msgs no total, {novas} novas", label)
-            else:
-                print("[aviso] Falha na integracao com a API.")
-                registrar_log(id_compra, "FALHA", "Falha na integracao com a API", label)
+            # Delay para garantir que o Chrome concluiu a mudanca de foco e abertura
+            time.sleep(1.5)
+
+        # 9. Registra o tempo total gasto nesta licitacao, separado por tipo (usado pelo painel de status)
+        tempo_gasto = time.time() - inicio_item
+        print(f"[tempo] Licitacao {id_compra} ({tipo}) processada em {tempo_gasto:.1f}s")
 
 def main():
     parser = argparse.ArgumentParser(description="Bot de monitoramento de mensagens (Versao PyAutoGUI / Nuvem).")
@@ -350,7 +418,7 @@ def main():
 
 
     if args.id:
-        ids_monitorados = [{"idCompra": args.id, "uasg": None, "numeroPregao": None, "anoPregao": None}]
+        ids_monitorados = [{"idCompra": args.id, "uasg": None, "numeroPregao": None, "anoPregao": None, "favorito": False}]
         print(f"[info] Rodando para um unico ID especifico via argumento: {args.id}")
     else:
         ids_monitorados = obter_licitacoes()

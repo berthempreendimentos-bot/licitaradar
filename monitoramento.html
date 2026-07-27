@@ -21,6 +21,7 @@
   }
 
   .stat-tile {
+    min-width: 0;
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 14px 16px;
@@ -38,13 +39,8 @@
     font-size: 12.5px;
     color: var(--muted);
     margin-top: 2px;
-  }
-
-  .situacao-breakdown {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 4px;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   .filter-row {
@@ -68,9 +64,15 @@
     align-items: flex-start;
   }
 
-  .monitor-list-panel {
-    width: 200px;
+  .monitor-tables {
+    width: 220px;
     flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .monitor-list-panel {
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--card-bg);
@@ -78,8 +80,17 @@
     overflow: hidden;
   }
 
+  .monitor-list-title {
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
   .monitor-list {
-    max-height: 520px;
+    max-height: 240px;
     overflow-y: auto;
   }
 
@@ -271,20 +282,11 @@
     margin-bottom: 14px;
   }
 
-  .stat-tile.wide {
-    grid-column: span 2;
-  }
-
   @media (max-width: 720px) {
     .monitor-layout { flex-direction: column; }
-    .monitor-list-panel { width: 100%; }
-    .monitor-list { max-height: 260px; }
-  }
-
-  @media (max-width: 480px) {
-    .stat-tile.wide {
-      grid-column: 1 / -1;
-    }
+    .monitor-tables { width: 100%; flex-direction: row; }
+    .monitor-list-panel { flex: 1; }
+    .monitor-list { max-height: 220px; }
   }
 
   .mensagens-section {
@@ -381,9 +383,17 @@
     <div class="status-msg" id="statusMsg" role="status" aria-live="polite"></div>
 
     <div class="monitor-layout" id="monitorLayout" style="display:none;">
-      <div class="monitor-list-panel">
-        <div class="monitor-list" id="monitorList"></div>
-        <div class="pagination" id="pagination"></div>
+      <div class="monitor-tables">
+        <div class="monitor-list-panel">
+          <div class="monitor-list-title">Normais</div>
+          <div class="monitor-list" id="monitorListNormais"></div>
+          <div class="pagination" id="paginationNormais"></div>
+        </div>
+        <div class="monitor-list-panel">
+          <div class="monitor-list-title">★ Favoritas</div>
+          <div class="monitor-list" id="monitorListFavoritas"></div>
+          <div class="pagination" id="paginationFavoritas"></div>
+        </div>
       </div>
       <div class="monitor-detail" id="monitorDetail"></div>
     </div>
@@ -430,16 +440,25 @@
     const statusMsg = document.getElementById('statusMsg');
     const filtroInput = document.getElementById('filtro');
     const monitorLayout = document.getElementById('monitorLayout');
-    const monitorListEl = document.getElementById('monitorList');
-    const paginationEl = document.getElementById('pagination');
+    const monitorListNormaisEl = document.getElementById('monitorListNormais');
+    const paginationNormaisEl = document.getElementById('paginationNormais');
+    const monitorListFavoritasEl = document.getElementById('monitorListFavoritas');
+    const paginationFavoritasEl = document.getElementById('paginationFavoritas');
     const monitorDetailEl = document.getElementById('monitorDetail');
 
     const ITENS_POR_PAGINA = 10;
     const SITUACOES_ALERTA = ['anulad', 'revogad', 'suspens', 'fracassad', 'desert', 'cancelad'];
+    const CATEGORIAS_ENCERRADAS = [
+      { chaves: ['revogad'], label: 'Revogadas' },
+      { chaves: ['suspens'], label: 'Suspensas' },
+      { chaves: ['anulad', 'fracassad', 'desert', 'cancelad'], label: 'Anuladas/Fracassadas/Desertas/Canceladas' },
+    ];
 
     let todosItens = [];
-    let itensFiltrados = [];
-    let paginaAtual = 1;
+    let normaisFiltrados = [];
+    let favoritasFiltrados = [];
+    let paginaAtualNormais = 1;
+    let paginaAtualFavoritas = 1;
     let idSelecionado = null;
 
     function formatarMoeda(valor) {
@@ -460,18 +479,20 @@
 
     function renderDashboard(itens) {
       const total = itens.length;
-      const valorTotal = itens.reduce((soma, item) => soma + (Number(item.valorEstimado) || 0), 0);
+      const favoritas = itens.filter((item) => item.favorito);
 
-      const porSituacao = {};
-      itens.forEach((item) => {
-        const chave = item.situacao || 'Não informada';
-        porSituacao[chave] = (porSituacao[chave] || 0) + 1;
-      });
-
-      const badges = Object.entries(porSituacao)
-        .sort((a, b) => b[1] - a[1])
-        .map(([situacao, qtd]) => `<span class="badge">${situacao}: ${qtd}</span>`)
-        .join('');
+      const tilesEncerradas = CATEGORIAS_ENCERRADAS.map(({ chaves, label }) => {
+        const qtd = itens.filter((item) => {
+          const s = (item.situacao || '').toLowerCase();
+          return chaves.some((chave) => s.includes(chave));
+        }).length;
+        return `
+          <div class="stat-tile">
+            <div class="stat-value">${qtd}</div>
+            <div class="stat-label">${label}</div>
+          </div>
+        `;
+      }).join('');
 
       statGrid.innerHTML = `
         <div class="stat-tile">
@@ -479,13 +500,10 @@
           <div class="stat-label">Pregões monitorados</div>
         </div>
         <div class="stat-tile">
-          <div class="stat-value">${formatarMoeda(valorTotal)}</div>
-          <div class="stat-label">Valor total estimado</div>
+          <div class="stat-value">${favoritas.length}</div>
+          <div class="stat-label">Licitações favoritas</div>
         </div>
-        <div class="stat-tile wide">
-          <div class="stat-label">Por situação</div>
-          <div class="situacao-breakdown">${badges || '<span class="empty-msg">—</span>'}</div>
-        </div>
+        ${tilesEncerradas}
       `;
     }
 
@@ -576,8 +594,8 @@
         if (!resp.ok) throw new Error(dados.erro || 'Falha ao atualizar favorito.');
 
         item.favorito = novoValor;
-        todosItens.sort((a, b) => (b.favorito === a.favorito ? 0 : b.favorito ? 1 : -1));
-        renderLista();
+        renderDashboard(todosItens);
+        aplicarFiltro();
         renderDetalhe(item);
       } catch (err) {
         btn.disabled = false;
@@ -642,11 +660,14 @@
       }
     }
 
-    function renderLista() {
+    function renderTabelaTipo(itensFiltrados, paginaAtual, listEl, paginationEl, onMudarPagina) {
       const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
       const pagina = itensFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
 
-      monitorListEl.innerHTML = '';
+      listEl.innerHTML = '';
+      if (pagina.length === 0) {
+        listEl.innerHTML = '<p class="empty-msg" style="padding:10px;">Nenhum item.</p>';
+      }
       pagina.forEach((item) => {
         const selecionado = item.idCompra === idSelecionado;
         const row = document.createElement('div');
@@ -660,7 +681,7 @@
         `;
         const selecionar = () => {
           idSelecionado = item.idCompra;
-          renderLista();
+          renderListas();
           renderDetalhe(item);
         };
         row.addEventListener('click', selecionar);
@@ -670,7 +691,7 @@
             selecionar();
           }
         });
-        monitorListEl.appendChild(row);
+        listEl.appendChild(row);
       });
 
       const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA));
@@ -682,27 +703,40 @@
         btn.className = p === paginaAtual ? 'active' : '';
         btn.setAttribute('aria-label', `Página ${p}`);
         if (p === paginaAtual) btn.setAttribute('aria-current', 'page');
-        btn.addEventListener('click', () => {
-          paginaAtual = p;
-          renderLista();
-        });
+        btn.addEventListener('click', () => onMudarPagina(p));
         paginationEl.appendChild(btn);
       }
     }
 
+    function renderListas() {
+      renderTabelaTipo(normaisFiltrados, paginaAtualNormais, monitorListNormaisEl, paginationNormaisEl, (p) => {
+        paginaAtualNormais = p;
+        renderListas();
+      });
+      renderTabelaTipo(favoritasFiltrados, paginaAtualFavoritas, monitorListFavoritasEl, paginationFavoritasEl, (p) => {
+        paginaAtualFavoritas = p;
+        renderListas();
+      });
+    }
+
     function aplicarFiltro() {
       const termo = filtroInput.value.trim().toLowerCase();
-      itensFiltrados = !termo
-        ? todosItens
-        : todosItens.filter((item) => {
-            const campos = [item.orgao, item.unidade, item.uasg, item.numeroPregao, item.objeto, item.uf]
-              .filter(Boolean)
-              .join(' ')
-              .toLowerCase();
-            return campos.includes(termo);
-          });
+      const bateComFiltro = (item) => {
+        if (!termo) return true;
+        const campos = [item.orgao, item.unidade, item.uasg, item.numeroPregao, item.objeto, item.uf]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return campos.includes(termo);
+      };
 
-      paginaAtual = 1;
+      normaisFiltrados = todosItens.filter((item) => !item.favorito && bateComFiltro(item));
+      favoritasFiltrados = todosItens.filter((item) => item.favorito && bateComFiltro(item));
+
+      paginaAtualNormais = 1;
+      paginaAtualFavoritas = 1;
+
+      const itensFiltrados = normaisFiltrados.concat(favoritasFiltrados);
 
       if (itensFiltrados.length === 0) {
         monitorLayout.style.display = 'none';
@@ -717,7 +751,7 @@
         idSelecionado = itensFiltrados[0].idCompra;
       }
 
-      renderLista();
+      renderListas();
       renderDetalhe(itensFiltrados.find((item) => item.idCompra === idSelecionado));
     }
 
