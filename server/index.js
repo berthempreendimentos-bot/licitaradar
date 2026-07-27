@@ -16,6 +16,7 @@ function exigirLogin(req, res, next) {
   // Permite que o robô (Python/JS) envie mensagens e consulte a lista sem precisar de sessão
   if (req.path.startsWith('/api/mensagens/') && req.method === 'POST') return next();
   if (req.path === '/api/monitorados' && req.method === 'GET') return next();
+  if (req.path === '/api/bot/alerta' && req.method === 'POST') return next();
 
   if (req.session && req.session.usuarioId) return next();
   if (req.path.startsWith('/api/')) {
@@ -32,6 +33,16 @@ const TAMANHO_PAGINA = 500;
 
 function formatarData(data) {
   return data.toISOString().slice(0, 10);
+}
+
+// UASG sempre tem 6 dígitos e muitas começam com zero (ex.: 070011). Sem completar
+// com zero à esquerda, a API do governo trata "70011" como um código diferente de
+// "070011" e simplesmente não devolve nenhum resultado (parece bug de busca, mas é
+// só o zero que falta).
+function normalizarUasg(valor) {
+  const digitos = String(valor || '').replace(/\D/g, '');
+  if (!digitos) return '';
+  return digitos.length < 6 ? digitos.padStart(6, '0') : digitos;
 }
 
 // Aceita formatos como "90067", "90067/2026", "090067-2026" ou colado "900672026"
@@ -61,7 +72,7 @@ function normalizarNumeroPregao(valor) {
 }
 
 const { parseMensagensColadas, verificarPalavrasChave } = require('./src/utils/mensagens');
-const { notificarWhatsapp } = require('./src/services/whatsappWebhook');
+const { notificarWhatsapp, testarWebhook } = require('./src/services/whatsappWebhook');
 const roboLocal = require('./src/services/roboLocal');
 
 app.use(express.json());
@@ -162,8 +173,43 @@ function transmitirAlerta(alerta) {
   }
 }
 
+const TIPOS_NOTIFICACAO_ALERTA = new Set(['padrao', 'urgente', 'silencioso']);
+
+// Chamado pelo watchdog local (monitor_bot_infinito.py) quando o bot_infinito.py
+// para de rodar (ou volta a rodar) no PC do usuário. Reaproveita o mesmo caminho de
+// notificação dos alertas de palavra-chave: pop-up/som em qualquer aba aberta (SSE)
+// e mensagem pelo webhook do WhatsApp configurado.
+app.post('/api/bot/alerta', async (req, res) => {
+  const mensagem = String((req.body || {}).mensagem || '').trim();
+  const tipoNotificacaoBruto = String((req.body || {}).tipoNotificacao || 'urgente').trim();
+  const tipoNotificacao = TIPOS_NOTIFICACAO_ALERTA.has(tipoNotificacaoBruto) ? tipoNotificacaoBruto : 'urgente';
+
+  if (!mensagem) {
+    return res.status(400).json({ erro: 'Informe a mensagem do alerta.' });
+  }
+
+  const alerta = {
+    id: 'bot-' + Date.now(),
+    palavraEncontrada: 'Robô local',
+    tipoNotificacao,
+    mensagem,
+    criadoEm: new Date().toISOString(),
+  };
+
+  transmitirAlerta(alerta);
+
+  try {
+    const supabase = getSupabase();
+    await notificarWhatsapp(supabase, [alerta]);
+  } catch (erroWhatsapp) {
+    console.error('Erro ao notificar WhatsApp sobre status do robô:', erroWhatsapp.message);
+  }
+
+  res.json({ ok: true });
+});
+
 app.get('/api/buscar', async (req, res) => {
-  const uasg = String(req.query.uasg || '').trim();
+  const uasg = normalizarUasg(req.query.uasg);
   const pregaoRaw = String(req.query.pregao || '').trim();
 
   if (!uasg) {
@@ -700,6 +746,22 @@ app.post('/api/whatsapp/numeros', async (req, res) => {
   } catch (erro) {
     console.error('Erro ao salvar número do WhatsApp:', erro.message);
     res.status(502).json({ erro: 'Não foi possível salvar o número agora.' });
+  }
+});
+
+app.post('/api/whatsapp/testar', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const resultado = await testarWebhook(supabase);
+
+    if (resultado.erro) {
+      return res.status(400).json({ erro: resultado.erro });
+    }
+
+    res.json(resultado);
+  } catch (erro) {
+    console.error('Erro ao testar webhook do WhatsApp:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível testar o webhook agora.' });
   }
 });
 

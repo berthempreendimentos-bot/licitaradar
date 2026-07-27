@@ -144,6 +144,8 @@
   .pagination {
     display: flex;
     justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 10px;
     border-top: 1px solid var(--border);
@@ -152,6 +154,44 @@
   .pagination button {
     width: 28px;
     height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  .pagination-ellipsis {
+    width: 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .pagination-goto {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+  }
+
+  .pagination-goto input {
+    width: 52px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 0 4px;
+  }
+
+  .pagination-goto button {
+    width: auto;
+    height: 28px;
+    padding: 0 10px;
     border-radius: 6px;
     border: 1px solid var(--border);
     background: var(--card-bg);
@@ -461,11 +501,6 @@
     let paginaAtualFavoritas = 1;
     let idSelecionado = null;
 
-    function formatarMoeda(valor) {
-      if (valor === null || valor === undefined) return '—';
-      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
-
     function formatarData(iso) {
       if (!iso) return '—';
       const d = new Date(iso);
@@ -557,10 +592,7 @@
             <div class="detail-label">Data Monitoração</div>
             <div class="detail-value">${formatarData(item.atualizadoEm || item.criadoEm)}</div>
           </div>
-          <div class="detail-field">
-            <div class="detail-label">Valor estimado</div>
-            <div class="detail-value">${formatarMoeda(item.valorEstimado)}</div>
-          </div>
+
         </div>
         <div class="detail-objeto">${item.objeto || 'Sem descrição do objeto.'}</div>
         <div class="result-url">
@@ -696,15 +728,70 @@
 
       const totalPaginas = Math.max(1, Math.ceil(itensFiltrados.length / ITENS_POR_PAGINA));
       paginationEl.innerHTML = '';
-      for (let p = 1; p <= totalPaginas; p++) {
-        const btn = document.createElement('button');
-        btn.textContent = p;
-        btn.type = 'button';
-        btn.className = p === paginaAtual ? 'active' : '';
-        btn.setAttribute('aria-label', `Página ${p}`);
-        if (p === paginaAtual) btn.setAttribute('aria-current', 'page');
-        btn.addEventListener('click', () => onMudarPagina(p));
-        paginationEl.appendChild(btn);
+
+      if (totalPaginas > 1) {
+        const irParaPagina = (p) => onMudarPagina(Math.min(Math.max(1, p), totalPaginas));
+
+        const criarBotao = (rotulo, destino, { ariaLabel, ativo, desabilitado } = {}) => {
+          const btn = document.createElement('button');
+          btn.textContent = rotulo;
+          btn.type = 'button';
+          btn.setAttribute('aria-label', ariaLabel || `Página ${rotulo}`);
+          if (ativo) {
+            btn.className = 'active';
+            btn.setAttribute('aria-current', 'page');
+          }
+          if (desabilitado) {
+            btn.disabled = true;
+          } else {
+            btn.addEventListener('click', () => irParaPagina(destino));
+          }
+          return btn;
+        };
+
+        paginationEl.appendChild(criarBotao('«', 1, { ariaLabel: 'Primeira página', desabilitado: paginaAtual === 1 }));
+        paginationEl.appendChild(criarBotao('‹', paginaAtual - 1, { ariaLabel: 'Página anterior', desabilitado: paginaAtual === 1 }));
+
+        // Mostra só a primeira, a última e uma janela ao redor da página atual,
+        // com "…" nos buracos — evita uma fileira gigante quando há muitas páginas.
+        const paginasVisiveis = [...new Set([1, totalPaginas, paginaAtual - 2, paginaAtual - 1, paginaAtual, paginaAtual + 1, paginaAtual + 2])]
+          .filter((p) => p >= 1 && p <= totalPaginas)
+          .sort((a, b) => a - b);
+
+        let ultimaRenderizada = 0;
+        paginasVisiveis.forEach((p) => {
+          if (p - ultimaRenderizada > 1) {
+            const span = document.createElement('span');
+            span.textContent = '…';
+            span.className = 'pagination-ellipsis';
+            span.setAttribute('aria-hidden', 'true');
+            paginationEl.appendChild(span);
+          }
+          paginationEl.appendChild(criarBotao(p, p, { ativo: p === paginaAtual }));
+          ultimaRenderizada = p;
+        });
+
+        paginationEl.appendChild(criarBotao('›', paginaAtual + 1, { ariaLabel: 'Próxima página', desabilitado: paginaAtual === totalPaginas }));
+        paginationEl.appendChild(criarBotao('»', totalPaginas, { ariaLabel: 'Última página', desabilitado: paginaAtual === totalPaginas }));
+
+        const idInput = `${listEl.id}-irPaginaInput`;
+        const formIr = document.createElement('form');
+        formIr.className = 'pagination-goto';
+        formIr.innerHTML = `
+          <label class="sr-only" for="${idInput}">Ir para a página</label>
+          <input type="number" id="${idInput}" min="1" max="${totalPaginas}" placeholder="Nº">
+          <button type="submit">Ir</button>
+        `;
+        formIr.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const input = formIr.querySelector(`#${idInput}`);
+          const valor = parseInt(input.value, 10);
+          if (Number.isInteger(valor)) {
+            irParaPagina(valor);
+            input.value = '';
+          }
+        });
+        paginationEl.appendChild(formIr);
       }
     }
 

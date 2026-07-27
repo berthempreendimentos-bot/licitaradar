@@ -135,7 +135,10 @@
             <label for="webhookUrl">URL do webhook</label>
             <input type="url" id="webhookUrl" class="text-input" placeholder="https://sua-automacao.com/webhook" autocomplete="off">
           </div>
-          <button class="monitor-btn" type="submit">Salvar webhook</button>
+          <div style="display:flex; gap:8px;">
+            <button class="monitor-btn" type="submit">Salvar webhook</button>
+            <button class="monitor-btn" type="button" id="testarWebhookBtn">Testar</button>
+          </div>
         </form>
         <div class="status-msg" id="webhookStatusMsg" role="status" aria-live="polite"></div>
       </div>
@@ -224,6 +227,25 @@
       } catch (err) {
         webhookStatusMsg.classList.add('error');
         webhookStatusMsg.textContent = err.message;
+      }
+    });
+
+    const testarWebhookBtn = document.getElementById('testarWebhookBtn');
+
+    testarWebhookBtn.addEventListener('click', async () => {
+      webhookStatusMsg.classList.remove('error');
+      webhookStatusMsg.textContent = 'Enviando mensagem de teste...';
+      testarWebhookBtn.disabled = true;
+      try {
+        const resp = await fetch('/api/whatsapp/testar', { method: 'POST' });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao testar o webhook.');
+        webhookStatusMsg.textContent = `Teste enviado! O webhook respondeu com sucesso (status ${dados.status}) para ${dados.totalNumeros} número(s).`;
+      } catch (err) {
+        webhookStatusMsg.classList.add('error');
+        webhookStatusMsg.textContent = err.message;
+      } finally {
+        testarWebhookBtn.disabled = false;
       }
     });
 
