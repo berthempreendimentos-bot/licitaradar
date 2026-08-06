@@ -17,6 +17,9 @@ function exigirLogin(req, res, next) {
   if (req.path.startsWith('/api/mensagens/') && req.method === 'POST') return next();
   if (req.path === '/api/monitorados' && req.method === 'GET') return next();
   if (req.path === '/api/bot/alerta' && req.method === 'POST') return next();
+  // O robo marca a licitacao como revogada quando a pagina de mensagens nao abre
+  // (ver marcar_como_revogada em monitor_mensagens.py) - tambem sem sessao de usuario.
+  if (/^\/api\/monitorados\/[^/]+\/situacao$/.test(req.path) && req.method === 'PATCH') return next();
 
   if (req.session && req.session.usuarioId) return next();
   if (req.path.startsWith('/api/')) {
@@ -262,24 +265,27 @@ app.get('/api/buscar', async (req, res) => {
         })
       : resultados;
 
-    const itens = filtrados.map((item) => ({
-      idCompra: item.idCompra,
-      uasg: item.unidadeOrgaoCodigoUnidade,
-      unidade: item.unidadeOrgaoNomeUnidade,
-      orgao: item.orgaoEntidadeRazaoSocial,
-      uf: item.unidadeOrgaoUfSigla,
-      municipio: item.unidadeOrgaoMunicipioNome,
-      numeroPregao: item.numeroCompra,
-      anoPregao: item.anoCompraPncp,
-      modalidade: item.modalidadeNome,
-      objeto: item.objetoCompra,
-      situacao: item.situacaoCompraNomePncp,
-      valorEstimado: item.valorTotalEstimado,
-      dataAbertura: item.dataAberturaPropostaPncp,
-      dataEncerramento: item.dataEncerramentoPropostaPncp,
-      link: `https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra=${item.idCompra}`,
-      monitorado: false,
-    }));
+    const itens = filtrados
+      .map((item) => ({
+        idCompra: item.idCompra,
+        uasg: item.unidadeOrgaoCodigoUnidade,
+        unidade: item.unidadeOrgaoNomeUnidade,
+        orgao: item.orgaoEntidadeRazaoSocial,
+        uf: item.unidadeOrgaoUfSigla,
+        municipio: item.unidadeOrgaoMunicipioNome,
+        numeroPregao: item.numeroCompra,
+        anoPregao: item.anoCompraPncp,
+        modalidade: item.modalidadeNome,
+        objeto: item.objetoCompra,
+        situacao: item.situacaoCompraNomePncp,
+        valorEstimado: item.valorTotalEstimado,
+        dataAbertura: item.dataAberturaPropostaPncp,
+        dataEncerramento: item.dataEncerramentoPropostaPncp,
+        link: `https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra=${item.idCompra}`,
+        monitorado: false,
+      }))
+      // Licitacoes revogadas nao interessam para novo monitoramento - fora do resultado da busca.
+      .filter((item) => !String(item.situacao || '').toLowerCase().includes('revogad'));
 
     if (itens.length > 0) {
       try {
@@ -393,18 +399,194 @@ app.post('/api/monitorar', async (req, res) => {
   }
 });
 
+app.get('/api/licitacoes/busca', async (req, res) => {
+  const {
+    cidade,
+    uf,
+    dataAberturaInicio,
+    dataAberturaFim,
+    valorMin,
+    valorMax,
+    uasg,
+    pregao,
+    objeto,
+    situacao,
+    modalidade,
+    favorito,
+    ordenacao = 'data_abertura',
+    direcao = 'desc',
+    pagina = 1,
+    limite = 10
+  } = req.query;
+
+  try {
+    const supabase = getSupabase();
+
+    // Buscar lista de favoritos para mapeamento
+    const { data: monitored } = await supabase
+      .from('pregoes_monitorados')
+      .select('id_compra, favorito');
+    
+    const favMap = {};
+    if (monitored) {
+      monitored.forEach((m) => {
+        favMap[m.id_compra] = m.favorito;
+      });
+    }
+
+    let query = supabase
+      .from('licitacoes_pncp')
+      .select('*', { count: 'exact' });
+
+    // Aplicar filtros dinâmicos
+    if (cidade && cidade.trim()) {
+      query = query.ilike('municipio', `%${cidade.trim()}%`);
+    }
+    if (uf && uf.trim() && uf !== 'TODOS') {
+      query = query.eq('uf', uf.trim());
+    }
+    if (dataAberturaInicio && dataAberturaInicio.trim()) {
+      query = query.gte('data_abertura', `${dataAberturaInicio.trim()}T00:00:00Z`);
+    }
+    if (dataAberturaFim && dataAberturaFim.trim()) {
+      query = query.lte('data_abertura', `${dataAberturaFim.trim()}T23:59:59Z`);
+    }
+    if (valorMin && valorMin.trim()) {
+      query = query.gte('valor_estimado', parseFloat(valorMin));
+    }
+    if (valorMax && valorMax.trim()) {
+      query = query.lte('valor_estimado', parseFloat(valorMax));
+    }
+    if (uasg && uasg.trim()) {
+      query = query.ilike('uasg', `%${uasg.trim()}%`);
+    }
+    if (pregao && pregao.trim()) {
+      query = query.ilike('numero_pregao', `%${pregao.trim()}%`);
+    }
+    if (objeto && objeto.trim()) {
+      query = query.ilike('objeto', `%${objeto.trim()}%`);
+    }
+    if (situacao && situacao.trim() && situacao !== 'TODOS') {
+      query = query.ilike('situacao', `%${situacao.trim()}%`);
+    }
+    if (modalidade && modalidade.trim() && modalidade !== 'TODOS') {
+      query = query.ilike('modalidade', `%${modalidade.trim()}%`);
+    }
+    if (favorito === 'true') {
+      const favIds = Object.keys(favMap).filter((id) => favMap[id] === true);
+      if (favIds.length === 0) {
+        return res.json({
+          total: 0,
+          pagina: Math.max(1, parseInt(pagina, 10) || 1),
+          limite: Math.max(1, parseInt(limite, 10) || 10),
+          itens: [],
+        });
+      }
+      query = query.in('id_compra', favIds);
+    }
+
+    // Ordenação segura
+    const camposOrdenacaoValidos = ['data_abertura', 'valor_estimado', 'uasg', 'criado_em', 'atualizado_em'];
+    const campoFinal = camposOrdenacaoValidos.includes(ordenacao) ? ordenacao : 'data_abertura';
+    const direcaoAsc = direcao === 'asc';
+
+    query = query.order(campoFinal, { ascending: direcaoAsc });
+
+    // Paginação
+    const numPagina = Math.max(1, parseInt(pagina, 10) || 1);
+    const numLimite = Math.max(1, parseInt(limite, 10) || 10);
+    const doItem = (numPagina - 1) * numLimite;
+    const ateItem = doItem + numLimite - 1;
+
+    query = query.range(doItem, ateItem);
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+
+    const itens = (data || []).map((row) => ({
+      idCompra: row.id_compra,
+      uasg: row.uasg,
+      unidade: row.unidade,
+      orgao: row.orgao,
+      uf: row.uf,
+      municipio: row.municipio,
+      numeroPregao: row.numero_pregao,
+      anoPregao: row.ano_pregao,
+      modalidade: row.modalidade,
+      objeto: row.objeto,
+      situacao: row.situacao,
+      valorEstimado: row.valor_estimado,
+      dataAbertura: row.data_abertura,
+      dataEncerramento: row.data_encerramento,
+      link: row.link,
+      criadoEm: row.criado_em,
+      atualizadoEm: row.atualizado_em,
+      favorito: !!favMap[row.id_compra],
+    }));
+
+    res.json({
+      total: count || 0,
+      pagina: numPagina,
+      limite: numLimite,
+      itens,
+    });
+  } catch (erro) {
+    console.error('Erro ao buscar licitações no Supabase:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível buscar as licitações agora.' });
+  }
+});
+
 app.patch('/api/monitorados/:idCompra/favorito', async (req, res) => {
   const { idCompra } = req.params;
   const favorito = Boolean((req.body || {}).favorito);
 
   try {
     const supabase = getSupabase();
-    const { error } = await supabase
+    
+    // Tenta primeiro atualizar
+    const { data: updated, error: updateError } = await supabase
       .from('pregoes_monitorados')
       .update({ favorito, atualizado_em: new Date().toISOString() })
-      .eq('id_compra', idCompra);
+      .eq('id_compra', idCompra)
+      .select();
 
-    if (error) throw error;
+    if (updateError) throw updateError;
+
+    // Se não atualizou nada (não existia no monitoramento), buscamos no cache e inserimos
+    if (!updated || updated.length === 0) {
+      const { data: cachedItem, error: fetchError } = await supabase
+        .from('licitacoes_pncp')
+        .select('*')
+        .eq('id_compra', idCompra)
+        .single();
+
+      if (fetchError || !cachedItem) {
+        return res.status(404).json({ erro: 'Licitação não encontrada para favoritar.' });
+      }
+
+      const { error: insertError } = await supabase
+        .from('pregoes_monitorados')
+        .insert({
+          id_compra: cachedItem.id_compra,
+          uasg: cachedItem.uasg,
+          numero_pregao: cachedItem.numero_pregao,
+          ano_pregao: cachedItem.ano_pregao,
+          municipio: cachedItem.municipio,
+          uf: cachedItem.uf,
+          data_abertura: cachedItem.data_abertura,
+          valor_estimado: cachedItem.valor_estimado,
+          objeto: cachedItem.objeto,
+          situacao: cachedItem.situacao,
+          modalidade: cachedItem.modalidade,
+          link: cachedItem.link,
+          favorito: favorito,
+          monitorado: true,
+          atualizado_em: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+    }
 
     res.json({ ok: true, favorito });
   } catch (erro) {
@@ -875,12 +1057,20 @@ app.get('/api/robo/log', (req, res) => {
   res.json({ linhas: roboLocal.obterLog() });
 });
 
-// O worker de background não funciona em Vercel
-// const { startWorker } = require('./worker');
+// ---------- Automação de busca de licitações no PNCP ----------
+const { fetchPNCPBids } = require('./src/services/pncpFetcher');
+
+// Executa a cada 8 horas (3 vezes ao dia)
+const INTERVALO_BUSCA_PNCP = 8 * 60 * 60 * 1000; 
+setInterval(() => {
+  fetchPNCPBids(2).catch((err) => console.error('[Automação PNCP] Erro na busca em segundo plano:', err.message));
+}, INTERVALO_BUSCA_PNCP);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-  // startWorker(); // Removido para compatibilidade Vercel
+  
+  // Executa uma busca inicial na inicialização do servidor (últimos 3 dias)
+  fetchPNCPBids(3).catch((err) => console.error('[Automação PNCP] Erro na busca inicial:', err.message));
 });
 
 module.exports = app;

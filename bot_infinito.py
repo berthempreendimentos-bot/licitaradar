@@ -50,6 +50,9 @@ tabela_licitacoes = {}
 tabela_lock = threading.Lock()
 
 stop_event = threading.Event()
+pause_event = threading.Event()
+parada_obrigatoria_event = threading.Event()
+qtd_falhas_parada_obrigatoria = "várias"
 processo_atual = None
 processo_lock = threading.Lock()
 
@@ -136,6 +139,33 @@ def solicitar_parada():
                     pass
 
 
+def solicitar_pausa():
+    pause_event.set()
+    atualizar_estado(status="Pausando o robô...")
+    registrar_historico_status("pausa")
+    with processo_lock:
+        if processo_atual is not None:
+            # Interrompe a varredura atual do mesmo jeito que o Parar - a licitacao
+            # em processamento ja foi salva em estado_execucao.json (salvar_estado_resumo),
+            # entao o worker_loop retoma exatamente dai quando a pausa for liberada.
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(processo_atual.pid)],
+                    capture_output=True,
+                )
+            except Exception:
+                try:
+                    processo_atual.kill()
+                except Exception:
+                    pass
+
+
+def solicitar_retomada():
+    pause_event.clear()
+    atualizar_estado(status="Retomando o robô...")
+    registrar_historico_status("retomada")
+
+
 def _ler_saida_processo(processo, fila):
     try:
         for linha in processo.stdout:
@@ -156,6 +186,19 @@ def worker_loop():
         print(f"[loop] Execucao anterior foi interrompida na licitacao ID: {resume_id}. Retomando dai na primeira varredura.")
 
     while not stop_event.is_set():
+        if pause_event.is_set():
+            atualizar_estado(status="Robô pausado. Aguardando retomada...")
+            while pause_event.is_set() and not stop_event.is_set():
+                time.sleep(0.2)
+            if stop_event.is_set():
+                break
+            # Recarrega o ponto de retomada do disco - ele foi salvo pela ultima
+            # licitacao em processamento antes da pausa interromper a varredura.
+            resume_id = carregar_estado_resumo()
+            if resume_id:
+                print(f"[loop] Retomando apos pausa na licitacao ID: {resume_id}.")
+            continue
+
         varredura += 1
         atualizar_estado(status=f"Iniciando varredura #{varredura}...", varredura_num=varredura)
         print(f"\n[loop] Iniciando nova varredura ({datetime.datetime.now().strftime('%H:%M:%S')})...")
@@ -233,6 +276,17 @@ def worker_loop():
                     atualizar_tabela(id_atual, "REVOGADA", linha[len("[revogada] "):])
                     continue
 
+                if linha.startswith("[parada_obrigatoria]"):
+                    print(f"[loop] PARADA OBRIGATORIA detectada - parando o robô. {linha}")
+                    match_qtd = re.search(r'(\d+) falhas consecutivas', linha)
+                    global qtd_falhas_parada_obrigatoria
+                    qtd_falhas_parada_obrigatoria = match_qtd.group(1) if match_qtd else "várias"
+                    atualizar_estado(status="PARADA OBRIGATÓRIA: muitas falhas de pesquisa seguidas.")
+                    registrar_historico_status("parada_obrigatoria")
+                    parada_obrigatoria_event.set()
+                    stop_event.set()
+                    continue
+
                 match_tempo = re.search(r'\[tempo\] Licitacao \S+ \((normal|favorita)\) processada em ([\d.]+)s', linha)
                 if match_tempo:
                     tipo_tempo = match_tempo.group(1)
@@ -266,8 +320,12 @@ def worker_loop():
         print("[loop] Varredura concluída. Iniciando nova varredura em 2 segundos...")
         time.sleep(2)
 
-    atualizar_estado(status="Robô parado pelo usuário.")
-    print("[loop] Robô parado pelo usuário.")
+    if parada_obrigatoria_event.is_set():
+        atualizar_estado(status="Robô parado automaticamente (muitas falhas seguidas).")
+        print("[loop] Robô parado automaticamente por parada obrigatória.")
+    else:
+        atualizar_estado(status="Robô parado pelo usuário.")
+        print("[loop] Robô parado pelo usuário.")
 
 
 def baixar_relatorio_erros():
@@ -303,7 +361,7 @@ def baixar_relatorio_erros():
 def criar_janela():
     root = tk.Tk()
     root.title("Robô ComprasNet - Painel de Status")
-    root.geometry("560x790+40+40")
+    root.geometry("640x790+40+40")
     root.attributes("-topmost", True)
     root.configure(bg="#111827")
     root.resizable(False, False)
@@ -325,6 +383,7 @@ def criar_janela():
             return
         solicitar_parada()
         btn_parar.config(state="disabled", text="Robô Parado", bg="#4b5563")
+        btn_pausar.config(state="disabled", text="⏸ Pausar Robô", bg="#4b5563")
 
     btn_parar = tk.Button(
         frame_botoes, text="🛑 Parar Robô", bg="#dc2626", fg="white",
@@ -333,6 +392,22 @@ def criar_janela():
         command=ao_clicar_parar
     )
     btn_parar.pack(side="left", expand=True, fill="x", padx=(0, 6))
+
+    def ao_clicar_pausar():
+        if pause_event.is_set():
+            solicitar_retomada()
+            btn_pausar.config(text="⏸ Pausar Robô", bg="#ca8a04", activebackground="#a16207")
+        else:
+            solicitar_pausa()
+            btn_pausar.config(text="▶ Continuar", bg="#16a34a", activebackground="#15803d")
+
+    btn_pausar = tk.Button(
+        frame_botoes, text="⏸ Pausar Robô", bg="#ca8a04", fg="white",
+        activebackground="#a16207", activeforeground="white",
+        font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=6,
+        command=ao_clicar_pausar
+    )
+    btn_pausar.pack(side="left", expand=True, fill="x", padx=(0, 6))
 
     btn_relatorio = tk.Button(
         frame_botoes, text="📄 Baixar Relatório de Erros", bg="#374151", fg="white",
@@ -429,6 +504,16 @@ def criar_janela():
             lbl_normais_processadas.config(text=str(estado["total_normais_processadas"]))
             lbl_favoritas_processadas.config(text=str(estado["total_favoritas_processadas"]))
 
+        if parada_obrigatoria_event.is_set():
+            parada_obrigatoria_event.clear()
+            messagebox.showwarning(
+                "Parada obrigatória",
+                f"O robô parou automaticamente após {qtd_falhas_parada_obrigatoria} falhas de pesquisa seguidas.\n\n"
+                "Isso costuma indicar um problema sistêmico (Chrome fechado, posição do botão "
+                "'Mensagens' mudou, ou o site do ComprasNet mudou de layout).\n\n"
+                "Verifique antes de reiniciar o robô."
+            )
+
         fim_contagem = HORA_PARADA if HORA_PARADA else datetime.datetime.now()
         decorrido = fim_contagem - HORA_INICIO
         total_segundos = int(decorrido.total_seconds())
@@ -455,6 +540,7 @@ def criar_janela():
 
         if stop_event.is_set():
             btn_parar.config(state="disabled", text="Robô Parado", bg="#4b5563")
+            btn_pausar.config(state="disabled", text="⏸ Pausar Robô", bg="#4b5563")
         else:
             # Reforça o "sempre visível" caso outra janela (ex.: Chrome) tente sobrepor.
             root.attributes("-topmost", True)

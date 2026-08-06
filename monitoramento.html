@@ -395,6 +395,7 @@
       <nav class="sidebar-nav">
         <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
         <a href="monitoramento.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="licitacao.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">gavel</span><span>Licitação</span></a>
         <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
         <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
         <a href="painel-local.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">terminal</span><span>Painel Local</span></a>
@@ -510,6 +511,10 @@
     function ehAlerta(situacao) {
       const s = (situacao || '').toLowerCase();
       return SITUACOES_ALERTA.some((termo) => s.includes(termo));
+    }
+
+    function ehRevogada(situacao) {
+      return (situacao || '').toLowerCase().includes('revogad');
     }
 
     function renderDashboard(itens) {
@@ -817,8 +822,8 @@
         return campos.includes(termo);
       };
 
-      normaisFiltrados = todosItens.filter((item) => !item.favorito && bateComFiltro(item));
-      favoritasFiltrados = todosItens.filter((item) => item.favorito && bateComFiltro(item));
+      normaisFiltrados = todosItens.filter((item) => !item.favorito && !ehRevogada(item.situacao) && bateComFiltro(item));
+      favoritasFiltrados = todosItens.filter((item) => item.favorito && !ehRevogada(item.situacao) && bateComFiltro(item));
 
       paginaAtualNormais = 1;
       paginaAtualFavoritas = 1;

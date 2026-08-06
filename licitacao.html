@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Pesquisa de Licitações</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .page.wide {
+    max-width: 1200px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field.checkbox-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    padding-top: 28px;
+  }
+
+  .field.checkbox-field label {
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+
+  .field.checkbox-field input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .field label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--label);
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .btn-primary {
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent-solid);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-solid-hover);
+  }
+
+  .btn-secondary {
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--bg);
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 20px 0;
+    margin-top: 14px;
+  }
+
+  .pagination button {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  .pagination button.active {
+    background: var(--accent-solid);
+    border-color: var(--accent-solid);
+    color: #fff;
+  }
+
+  .pagination button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .pagination-ellipsis {
+    width: 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .pagination-goto {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+  }
+
+  .pagination-goto input {
+    width: 52px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 0 4px;
+  }
+
+  .pagination-goto button {
+    width: auto;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  .result-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .fav-star {
+    font-size: 20px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .fav-star.active {
+    color: var(--accent);
+    font-variation-settings: 'FILL' 1;
+  }
+
+  /* Para selects ficarem idênticos aos inputs de texto */
+  select.text-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%235c647a' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+  }
+
+  [data-theme="dark"] select.text-input {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%239aa2ad' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="licitacao.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">gavel</span><span>Licitação</span></a>
+        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+        <a href="painel-local.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">terminal</span><span>Painel Local</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page wide">
+        <form class="card" id="filterForm">
+          <div class="form-grid">
+            <div class="field">
+              <label for="cidade">Cidade / Município</label>
+              <input type="text" id="cidade" class="text-input" placeholder="Ex.: São Paulo" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="uf">Estado (UF)</label>
+              <select id="uf" class="text-input">
+                <option value="TODOS">Todos os Estados</option>
+                <option value="AC">Acre (AC)</option>
+                <option value="AL">Alagoas (AL)</option>
+                <option value="AP">Amapá (AP)</option>
+                <option value="AM">Amazonas (AM)</option>
+                <option value="BA">Bahia (BA)</option>
+                <option value="CE">Ceará (CE)</option>
+                <option value="DF">Distrito Federal (DF)</option>
+                <option value="ES">Espírito Santo (ES)</option>
+                <option value="GO">Goiás (GO)</option>
+                <option value="MA">Maranhão (MA)</option>
+                <option value="MT">Mato Grosso (MT)</option>
+                <option value="MS">Mato Grosso do Sul (MS)</option>
+                <option value="MG">Minas Gerais (MG)</option>
+                <option value="PA">Pará (PA)</option>
+                <option value="PB">Paraíba (PB)</option>
+                <option value="PR">Paraná (PR)</option>
+                <option value="PE">Pernambuco (PE)</option>
+                <option value="PI">Piauí (PI)</option>
+                <option value="RJ">Rio de Janeiro (RJ)</option>
+                <option value="RN">Rio Grande do Norte (RN)</option>
+                <option value="RS">Rio Grande do Sul (RS)</option>
+                <option value="RO">Rondônia (RO)</option>
+                <option value="RR">Roraima (RR)</option>
+                <option value="SC">Santa Catarina (SC)</option>
+                <option value="SP">São Paulo (SP)</option>
+                <option value="SE">Sergipe (SE)</option>
+                <option value="TO">Tocantins (TO)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="dataAberturaInicio">Data Abertura (Início)</label>
+              <input type="date" id="dataAberturaInicio" class="text-input">
+            </div>
+
+            <div class="field">
+              <label for="dataAberturaFim">Data Abertura (Fim)</label>
+              <input type="date" id="dataAberturaFim" class="text-input">
+            </div>
+
+            <div class="field">
+              <label for="valorMin">Valor Mínimo (R$)</label>
+              <input type="number" id="valorMin" class="text-input" min="0" step="0.01" placeholder="0,00">
+            </div>
+
+            <div class="field">
+              <label for="valorMax">Valor Máximo (R$)</label>
+              <input type="number" id="valorMax" class="text-input" min="0" step="0.01" placeholder="Ex.: 500000,00">
+            </div>
+
+            <div class="field">
+              <label for="uasg">Código UASG</label>
+              <input type="text" id="uasg" class="text-input" placeholder="Ex.: 925010" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="pregao">Pregão</label>
+              <input type="text" id="pregao" class="text-input" placeholder="Ex.: 90001" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="objeto">Palavra no Objeto</label>
+              <input type="text" id="objeto" class="text-input" placeholder="Ex.: Software" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="situacao">Situação</label>
+              <select id="situacao" class="text-input">
+                <option value="TODOS">Todas as Situações</option>
+                <option value="Publicado">Publicado</option>
+                <option value="Em andamento">Em andamento</option>
+                <option value="Suspenso">Suspenso</option>
+                <option value="Revogado">Revogado</option>
+                <option value="Anulado">Anulado</option>
+                <option value="Homologado">Homologado</option>
+                <option value="Adjudicado">Adjudicado</option>
+                <option value="Fracassado">Fracassado</option>
+                <option value="Desertado">Desertado</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="modalidade">Modalidade</label>
+              <select id="modalidade" class="text-input">
+                <option value="TODOS">Todas as Modalidades</option>
+                <option value="Pregão">Pregão</option>
+                <option value="Concorrência">Concorrência</option>
+                <option value="Concurso">Concurso</option>
+                <option value="Leilão">Leilão</option>
+                <option value="Diálogo Competitivo">Diálogo Competitivo</option>
+                <option value="Dispensa de Licitação">Dispensa de Licitação</option>
+                <option value="Inexigibilidade de Licitação">Inexigibilidade de Licitação</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="ordenacao">Ordenar por</label>
+              <select id="ordenacao" class="text-input">
+                <option value="data_abertura">Data de Abertura</option>
+                <option value="valor_estimado">Valor Estimado</option>
+                <option value="uasg">UASG</option>
+                <option value="criado_em">Data de Monitoramento</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="direcao">Ordem</label>
+              <select id="direcao" class="text-input">
+                <option value="desc">Decrescente (Z-A / Novo-Antigo)</option>
+                <option value="asc">Crescente (A-Z / Antigo-Novo)</option>
+              </select>
+            </div>
+
+            <div class="field checkbox-field">
+              <input type="checkbox" id="favorito">
+              <label for="favorito">Apenas Favoritos ★</label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" id="btnClear">Limpar Filtros</button>
+            <button type="submit" class="btn-primary">
+              <span class="material-symbols-outlined" aria-hidden="true">search</span>
+              Pesquisar
+            </button>
+          </div>
+        </form>
+
+        <div class="status-msg" id="statusMsg" role="status" aria-live="polite">Clique em Pesquisar para listar as licitações salvas no banco de dados.</div>
+        <div class="results" id="results"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      themeLabel.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+
+    themeToggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    const filterForm = document.getElementById('filterForm');
+    const btnClear = document.getElementById('btnClear');
+    const statusMsg = document.getElementById('statusMsg');
+    const resultsEl = document.getElementById('results');
+    const paginationEl = document.getElementById('pagination');
+
+    let paginaAtual = 1;
+    const limitePorPagina = 10;
+
+    function formatarMoeda(valor) {
+      if (valor === null || valor === undefined) return '—';
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    async function toggleFavorito(item, starEl) {
+      const novoValor = !item.favorito;
+      try {
+        const resp = await fetch(`/api/monitorados/${item.idCompra}/favorito`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ favorito: novoValor }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao atualizar favorito.');
+
+        item.favorito = novoValor;
+        if (novoValor) {
+          starEl.classList.add('active');
+          starEl.textContent = 'star';
+        } else {
+          starEl.classList.remove('active');
+          starEl.textContent = 'star_rate';
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderResultados(itens) {
+      resultsEl.innerHTML = '';
+      itens.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <div class="result-card-header">
+            <h3>UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}</h3>
+            <span class="material-symbols-outlined fav-star ${item.favorito ? 'active' : ''}" title="${item.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">${item.favorito ? 'star' : 'star_rate'}</span>
+          </div>
+          <div class="result-meta">
+            <span><strong>Órgão:</strong> ${item.orgao || '—'}</span>
+            <span><strong>Unidade:</strong> ${item.unidade || '—'}</span>
+            <span><strong>Município:</strong> ${item.municipio || '—'} - ${item.uf || '—'}</span>
+          </div>
+          <div class="result-objeto">${item.objeto || 'Sem descrição do objeto.'}</div>
+          <div class="result-meta">
+            <span class="badge">${item.situacao || 'Situação não informada'}</span>
+            <span><strong>Valor Estimado:</strong> ${formatarMoeda(item.valorEstimado)}</span>
+            <span><strong>Abertura:</strong> ${formatarData(item.dataAbertura)}</span>
+          </div>
+          <div class="result-url" style="margin-top:8px;">
+            Página no ComprasNet:
+            <a class="result-link" href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>
+          </div>
+        `;
+
+        const starEl = card.querySelector('.fav-star');
+        starEl.addEventListener('click', () => toggleFavorito(item, starEl));
+
+        resultsEl.appendChild(card);
+      });
+    }
+
+    function renderPagination(totalItens) {
+      paginationEl.innerHTML = '';
+      const totalPaginas = Math.ceil(totalItens / limitePorPagina);
+      if (totalPaginas <= 1) return;
+
+      const irParaPagina = (p) => {
+        paginaAtual = Math.min(Math.max(1, p), totalPaginas);
+        pesquisar(false);
+      };
+
+      const criarBotao = (rotulo, destino, { ariaLabel, ativo, desabilitado } = {}) => {
+        const btn = document.createElement('button');
+        btn.textContent = rotulo;
+        btn.type = 'button';
+        btn.setAttribute('aria-label', ariaLabel || `Página ${rotulo}`);
+        if (ativo) {
+          btn.className = 'active';
+          btn.setAttribute('aria-current', 'page');
+        }
+        if (desabilitado) {
+          btn.disabled = true;
+        } else {
+          btn.addEventListener('click', () => irParaPagina(destino));
+        }
+        return btn;
+      };
+
+      paginationEl.appendChild(criarBotao('«', 1, { ariaLabel: 'Primeira página', desabilitado: paginaAtual === 1 }));
+      paginationEl.appendChild(criarBotao('‹', paginaAtual - 1, { ariaLabel: 'Página anterior', desabilitado: paginaAtual === 1 }));
+
+      const paginasVisiveis = [...new Set([1, totalPaginas, paginaAtual - 2, paginaAtual - 1, paginaAtual, paginaAtual + 1, paginaAtual + 2])]
+        .filter((p) => p >= 1 && p <= totalPaginas)
+        .sort((a, b) => a - b);
+
+      let ultimaRenderizada = 0;
+      paginasVisiveis.forEach((p) => {
+        if (p - ultimaRenderizada > 1) {
+          const span = document.createElement('span');
+          span.textContent = '…';
+          span.className = 'pagination-ellipsis';
+          span.setAttribute('aria-hidden', 'true');
+          paginationEl.appendChild(span);
+        }
+        paginationEl.appendChild(criarBotao(p, p, { ativo: p === paginaAtual }));
+        ultimaRenderizada = p;
+      });
+
+      paginationEl.appendChild(criarBotao('›', paginaAtual + 1, { ariaLabel: 'Próxima página', desabilitado: paginaAtual === totalPaginas }));
+      paginationEl.appendChild(criarBotao('»', totalPaginas, { ariaLabel: 'Última página', desabilitado: paginaAtual === totalPaginas }));
+
+      const formIr = document.createElement('form');
+      formIr.className = 'pagination-goto';
+      formIr.innerHTML = `
+        <label class="sr-only" for="irPaginaInput">Ir para a página</label>
+        <input type="number" id="irPaginaInput" min="1" max="${totalPaginas}" placeholder="Nº">
+        <button type="submit">Ir</button>
+      `;
+      formIr.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = formIr.querySelector('#irPaginaInput');
+        const valor = parseInt(input.value, 10);
+        if (Number.isInteger(valor)) {
+          irParaPagina(valor);
+          input.value = '';
+        }
+      });
+      paginationEl.appendChild(formIr);
+    }
+
+    async function pesquisar(resetarPagina = true) {
+      if (resetarPagina) paginaAtual = 1;
+
+      statusMsg.classList.remove('error');
+      statusMsg.innerHTML = '<span class="spinner" aria-hidden="true"></span>Pesquisando licitações no banco de dados...';
+      resultsEl.innerHTML = '';
+      paginationEl.innerHTML = '';
+
+      const cidade = document.getElementById('cidade').value.trim();
+      const uf = document.getElementById('uf').value;
+      const dataAberturaInicio = document.getElementById('dataAberturaInicio').value;
+      const dataAberturaFim = document.getElementById('dataAberturaFim').value;
+      const valorMin = document.getElementById('valorMin').value.trim();
+      const valorMax = document.getElementById('valorMax').value.trim();
+      const uasg = document.getElementById('uasg').value.trim();
+      const pregao = document.getElementById('pregao').value.trim();
+      const objeto = document.getElementById('objeto').value.trim();
+      const situacao = document.getElementById('situacao').value;
+      const modalidade = document.getElementById('modalidade').value;
+      const ordenacao = document.getElementById('ordenacao').value;
+      const direcao = document.getElementById('direcao').value;
+      const favorito = document.getElementById('favorito').checked;
+
+      const params = new URLSearchParams({
+        pagina: paginaAtual,
+        limite: limitePorPagina,
+        ordenacao,
+        direcao,
+      });
+
+      if (cidade) params.set('cidade', cidade);
+      if (uf !== 'TODOS') params.set('uf', uf);
+      if (dataAberturaInicio) params.set('dataAberturaInicio', dataAberturaInicio);
+      if (dataAberturaFim) params.set('dataAberturaFim', dataAberturaFim);
+      if (valorMin) params.set('valorMin', valorMin);
+      if (valorMax) params.set('valorMax', valorMax);
+      if (uasg) params.set('uasg', uasg);
+      if (pregao) params.set('pregao', pregao);
+      if (objeto) params.set('objeto', objeto);
+      if (situacao !== 'TODOS') params.set('situacao', situacao);
+      if (modalidade !== 'TODOS') params.set('modalidade', modalidade);
+      if (favorito) params.set('favorito', 'true');
+
+      try {
+        const resp = await fetch(`/api/licitacoes/busca?${params.toString()}`);
+        const dados = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(dados.erro || 'Falha ao buscar licitações.');
+        }
+
+        if (dados.itens.length === 0) {
+          statusMsg.textContent = 'Nenhuma licitação encontrada no banco de dados para os critérios informados.';
+        } else {
+          statusMsg.textContent = `${dados.total} licitação(ões) encontrada(s). exibindo página ${dados.pagina} de ${Math.ceil(dados.total / limitePorPagina)}.`;
+          renderResultados(dados.itens);
+          renderPagination(dados.total);
+        }
+      } catch (err) {
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+      }
+    }
+
+    filterForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      pesquisar(true);
+    });
+
+    btnClear.addEventListener('click', () => {
+      filterForm.reset();
+      statusMsg.textContent = 'Clique em Pesquisar para listar as licitações salvas no banco de dados.';
+      resultsEl.innerHTML = '';
+      paginationEl.innerHTML = '';
+      paginaAtual = 1;
+    });
+
+    // Pesquisa inicial
+    pesquisar(true);
+  </script>
+</body>
+</html>

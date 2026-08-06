@@ -20,6 +20,23 @@ API_URL_MONITORADOS = f"{base_url}/api/monitorados"
 API_URL_BASE = f"{base_url}/api/mensagens"
 
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log_atualizacoes.log")
+FALHAS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "falhas_execucao.json")
+
+def carregar_falhas_anteriores():
+    if os.path.exists(FALHAS_FILE):
+        try:
+            with open(FALHAS_FILE, "r", encoding="utf-8") as f:
+                return set(json.load(f))
+        except Exception:
+            return set()
+    return set()
+
+def salvar_falhas_atuais(ids_falhos):
+    try:
+        with open(FALHAS_FILE, "w", encoding="utf-8") as f:
+            json.dump(sorted(str(i) for i in ids_falhos), f)
+    except Exception as e:
+        print(f"[aviso] Nao foi possivel salvar a lista de falhas: {e}")
 
 def formatar_label(item):
     uasg = item.get("uasg")
@@ -48,6 +65,11 @@ TEMPO_ABRIR_MENSAGENS = 2.5    # segundos esperando a aba de mensagens carregar
 
 # Mesma lista usada em monitoramento.html (SITUACOES_ALERTA) para identificar licitacoes encerradas.
 SITUACOES_ENCERRADAS = ['anulad', 'revogad', 'suspens', 'fracassad', 'desert', 'cancelad']
+
+# Circuito de seguranca: se a pesquisa falhar tantas vezes seguidas, provavelmente
+# algo sistemico quebrou (Chrome fechou, posicao do botao mudou, site mudou de layout)
+# e continuar so vai gerar mais falhas - melhor parar o robo e chamar atencao do usuario.
+LIMITE_FALHAS_CONSECUTIVAS = 10
 
 def esta_encerrada(situacao):
     s = (situacao or '').lower()
@@ -204,21 +226,32 @@ def salvar_posicao_botao(x, y):
     with open(arquivo_posicao, 'w') as f:
         json.dump({"x": x, "y": y}, f)
 
+NORMAIS_POR_FAVORITA = 4
+
 def mesclar_normais_favoritas(normais, favoritas):
-    # Intercala 1 normal + 1 favorita, sempre mantendo esse padrao pelo resto da
-    # varredura. Como normalmente ha muito menos favoritas que normais, as favoritas
-    # sao revisitadas em ciclo (voltam para a primeira quando a lista acaba) - assim
-    # elas continuam sendo analisadas repetidamente junto de cada normal nova aberta,
-    # em vez de sumir da intercalacao assim que a lista de favoritas se esgota.
+    # A cada NORMAIS_POR_FAVORITA normais abertas, intercala 1 favorita. Como
+    # normalmente ha muito menos favoritas que normais, as favoritas sao revisitadas
+    # em ciclo (voltam para a primeira quando a lista acaba) - assim elas continuam
+    # sendo analisadas repetidamente ao longo da varredura, em vez de sumir da
+    # intercalacao assim que a lista de favoritas se esgota.
     if not favoritas:
         return list(normais)
     if not normais:
         return list(favoritas)
 
     mesclado = []
+    idx_favorita = 0
     for i, normal in enumerate(normais):
         mesclado.append(normal)
-        mesclado.append(favoritas[i % len(favoritas)])
+        if (i + 1) % NORMAIS_POR_FAVORITA == 0:
+            mesclado.append(favoritas[idx_favorita % len(favoritas)])
+            idx_favorita += 1
+
+    # Garante ao menos uma passada pelas favoritas mesmo se houver menos de
+    # NORMAIS_POR_FAVORITA normais no total.
+    if idx_favorita == 0:
+        mesclado.append(favoritas[0])
+
     return mesclado
 
 def processar_lista_licitacoes(ids_monitorados):
@@ -228,13 +261,28 @@ def processar_lista_licitacoes(ids_monitorados):
     if ignoradas:
         print(f"[info] Ignorando {ignoradas} licitacoes encerradas (suspensa/revogada/anulada/etc) da varredura.")
 
-    normais = [item for item in ids_monitorados if not item.get("favorito")]
-    favoritas = [item for item in ids_monitorados if item.get("favorito")]
+    # Prioriza quem deu falha na varredura anterior: essas licitacoes vao para o
+    # inicio da fila (dentro do proprio grupo normal/favorita) para serem
+    # reanalisadas logo, em vez de esperar a volta completa do ciclo ate elas.
+    falhas_anteriores = carregar_falhas_anteriores()
+
+    def priorizar_falhas(lista):
+        if not falhas_anteriores:
+            return lista
+        prioridade = [item for item in lista if str(item["idCompra"]) in falhas_anteriores]
+        resto = [item for item in lista if str(item["idCompra"]) not in falhas_anteriores]
+        return prioridade + resto
+
+    normais = priorizar_falhas([item for item in ids_monitorados if not item.get("favorito")])
+    favoritas = priorizar_falhas([item for item in ids_monitorados if item.get("favorito")])
     ids_monitorados = mesclar_normais_favoritas(normais, favoritas)
 
     total = len(ids_monitorados)
     if total == 0:
         return
+
+    falhas_desta_varredura = set()
+    falhas_consecutivas = 0
 
     print(f"[info] Encontradas {len(normais)} licitacoes normais e {len(favoritas)} favoritas. Iniciando pipeline mesclado de 2 abas...")
 
@@ -337,11 +385,14 @@ def processar_lista_licitacoes(ids_monitorados):
             print(f"[revogada] {label} (ID {id_compra}) sem chat de mensagens - marcada como revogada e removida da varredura.")
             marcar_como_revogada(id_compra)
             registrar_log(id_compra, "REVOGADA", "Sem chat de mensagens (tela de informacoes da compra)", label)
+            falhas_consecutivas = 0
         else:
             texto_limpo = extrair_mensagens(texto_bruto)
             if not texto_limpo.strip():
                 print("ERRO: Nenhuma mensagem detectada. Talvez a pagina nao tenha carregado as mensagens a tempo.")
                 registrar_log(id_compra, "FALHA", "Nenhuma mensagem detectada na pagina", label)
+                falhas_desta_varredura.add(str(id_compra))
+                falhas_consecutivas += 1
             else:
                 resultado_api = enviar_para_api(texto_limpo, id_compra)
                 if resultado_api and resultado_api.get("ok"):
@@ -349,9 +400,18 @@ def processar_lista_licitacoes(ids_monitorados):
                     novas = resultado_api.get('novas', 0)
                     print(f"[ok] A aplicacao encontrou {tot} msgs no total. {novas} novas salvas!")
                     registrar_log(id_compra, "OK", f"{tot} msgs no total, {novas} novas", label)
+                    falhas_consecutivas = 0
                 else:
                     print("[aviso] Falha na integracao com a API.")
                     registrar_log(id_compra, "FALHA", "Falha na integracao com a API", label)
+                    falhas_desta_varredura.add(str(id_compra))
+                    falhas_consecutivas += 1
+
+        if falhas_consecutivas >= LIMITE_FALHAS_CONSECUTIVAS:
+            print(f"[parada_obrigatoria] {falhas_consecutivas} falhas consecutivas de pesquisa detectadas. "
+                  f"Abortando a execucao - verifique o Chrome e a posicao do botao 'Mensagens' antes de reiniciar o robo.")
+            salvar_falhas_atuais(falhas_desta_varredura)
+            sys.exit(2)
 
         # 8. Abre o próximo pregão da fila (se houver), somente apos a analise da aba anterior
         if proximo_para_abrir < total:
@@ -369,6 +429,12 @@ def processar_lista_licitacoes(ids_monitorados):
         # 9. Registra o tempo total gasto nesta licitacao, separado por tipo (usado pelo painel de status)
         tempo_gasto = time.time() - inicio_item
         print(f"[tempo] Licitacao {id_compra} ({tipo}) processada em {tempo_gasto:.1f}s")
+
+    # Guarda quem falhou nesta varredura para a proxima chamada priorizar essas
+    # licitacoes logo no inicio, em vez de esperar o ciclo completo dar a volta.
+    salvar_falhas_atuais(falhas_desta_varredura)
+    if falhas_desta_varredura:
+        print(f"[info] {len(falhas_desta_varredura)} licitacoes com falha nesta varredura serao priorizadas na proxima.")
 
 def main():
     parser = argparse.ArgumentParser(description="Bot de monitoramento de mensagens (Versao PyAutoGUI / Nuvem).")
