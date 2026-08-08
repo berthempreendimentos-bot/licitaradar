@@ -1,0 +1,184 @@
+{
+  "name": "PNCP - Busca e Alimentação de licitacoes_pncp",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Como configurar\n\n1. No n8n, defina as variáveis de ambiente `SUPABASE_URL` e `SUPABASE_SERVICE_KEY` com os mesmos valores usados em `licitaradar/server/.env`.\n2. Ajuste `diasParaTras` no node **Definir Período de Busca** se quiser buscar uma janela diferente de dias (padrão: 3).\n3. Ajuste o intervalo do node **Agendamento** conforme a frequência desejada.\n4. Use o node **Executar Manualmente** para testar sem esperar o agendamento.\n\nO workflow replica exatamente a lógica de `server/src/services/pncpFetcher.js`: busca paginada na API do PNCP (modalidade Pregão Eletrônico), mapeia os campos e faz upsert em `licitacoes_pncp` usando `id_compra` como chave de conflito.",
+        "height": 340,
+        "width": 380
+      },
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000001",
+      "name": "Anotações",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-680, -260]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000002",
+      "name": "Agendamento (a cada 6h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-680, 20]
+    },
+    {
+      "parameters": {},
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000003",
+      "name": "Executar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-680, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ajuste aqui a janela de busca (em dias) a partir de hoje.\nconst diasParaTras = 3;\n\nconst hoje = new Date();\nconst inicio = new Date();\ninicio.setDate(hoje.getDate() - diasParaTras);\n\nreturn [\n  {\n    json: {\n      startDateStr: inicio.toISOString().slice(0, 10),\n      endDateStr: hoje.toISOString().slice(0, 10),\n    },\n  },\n];"
+      },
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000004",
+      "name": "Definir Período de Busca",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-440, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Replica server/src/services/pncpFetcher.js: busca paginada na API do PNCP,\n// mapeia os campos para o formato da tabela licitacoes_pncp e remove\n// duplicados de id_compra dentro de cada página (necessário para o upsert).\n\nconst PNCP_API = 'https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133';\nconst TAMANHO_PAGINA = 500;\nconst MODALIDADE_PREGAO_ELETRONICO = 5;\n\nconst { startDateStr, endDateStr } = $input.first().json;\n\nasync function buscarPagina(pagina) {\n  const tentativasMax = 3;\n  for (let tentativa = 1; tentativa <= tentativasMax; tentativa++) {\n    try {\n      return await this.helpers.httpRequest({\n        method: 'GET',\n        url: PNCP_API,\n        qs: {\n          pagina: String(pagina),\n          tamanhoPagina: String(TAMANHO_PAGINA),\n          codigoModalidade: String(MODALIDADE_PREGAO_ELETRONICO),\n          dataPublicacaoPncpInicial: startDateStr,\n          dataPublicacaoPncpFinal: endDateStr,\n        },\n        headers: { Accept: 'application/json' },\n        json: true,\n      });\n    } catch (erro) {\n      if (tentativa === tentativasMax) throw erro;\n      await new Promise((resolve) => setTimeout(resolve, 1000 * tentativa));\n    }\n  }\n}\n\nconst paginasDeSaida = [];\nlet pagina = 1;\nlet temMais = true;\n\nwhile (temMais) {\n  const dados = await buscarPagina.call(this, pagina);\n  const resultados = dados.resultado || [];\n\n  if (resultados.length === 0) break;\n\n  const batch = resultados.map((item) => ({\n    id_compra: item.idCompra,\n    uasg: item.unidadeOrgaoCodigoUnidade,\n    unidade: item.unidadeOrgaoNomeUnidade,\n    orgao: item.orgaoEntidadeRazaoSocial,\n    uf: item.unidadeOrgaoUfSigla,\n    municipio: item.unidadeOrgaoMunicipioNome,\n    numero_pregao: item.numeroCompra,\n    ano_pregao: item.anoCompraPncp,\n    modalidade: item.modalidadeNome,\n    objeto: item.objetoCompra,\n    situacao: item.situacaoCompraNomePncp,\n    valor_estimado: item.valorTotalEstimado,\n    data_abertura: item.dataAberturaPropostaPncp,\n    data_encerramento: item.dataEncerramentoPropostaPncp,\n    link: `https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/acompanhamento-compra?compra=${item.idCompra}`,\n    dados_completos: item,\n    atualizado_em: new Date().toISOString(),\n  }));\n\n  // Evita o erro do Postgres \"ON CONFLICT DO UPDATE command cannot affect row a second time\"\n  const seenIds = new Set();\n  const uniqueBatch = batch.filter((item) => {\n    if (!item.id_compra || seenIds.has(item.id_compra)) return false;\n    seenIds.add(item.id_compra);\n    return true;\n  });\n\n  paginasDeSaida.push({\n    json: {\n      pagina,\n      totalRegistrosPagina: uniqueBatch.length,\n      registros: uniqueBatch,\n    },\n  });\n\n  const totalPaginas = dados.totalPaginas || 1;\n  temMais = pagina < totalPaginas;\n  pagina++;\n}\n\nreturn paginasDeSaida;"
+      },
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000005",
+      "name": "Buscar Licitações no PNCP (paginado)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-200, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/licitacoes_pncp",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "id_compra"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.registros }}",
+        "options": {}
+      },
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000006",
+      "name": "Upsert no Supabase (licitacoes_pncp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [60, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const paginas = $('Buscar Licitações no PNCP (paginado)').all();\nconst totalRegistros = paginas.reduce((soma, item) => soma + (item.json.totalRegistrosPagina || 0), 0);\n\nreturn [\n  {\n    json: {\n      executadoEm: new Date().toISOString(),\n      totalPaginasProcessadas: paginas.length,\n      totalRegistrosEnviados: totalRegistros,\n    },\n  },\n];"
+      },
+      "id": "8c2e6b1a-1111-4a1a-9a11-000000000007",
+      "name": "Resumo Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 100]
+    }
+  ],
+  "connections": {
+    "Agendamento (a cada 6h)": {
+      "main": [
+        [
+          {
+            "node": "Definir Período de Busca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "Definir Período de Busca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Período de Busca": {
+      "main": [
+        [
+          {
+            "node": "Buscar Licitações no PNCP (paginado)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Licitações no PNCP (paginado)": {
+      "main": [
+        [
+          {
+            "node": "Upsert no Supabase (licitacoes_pncp)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert no Supabase (licitacoes_pncp)": {
+      "main": [
+        [
+          {
+            "node": "Resumo Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
