@@ -565,33 +565,38 @@ app.get('/api/licitacoes/busca', async (req, res) => {
 
     const itens = (data || []).map((row) => {
       const infoPncp = extrairCnpjAnoSequencial(row.dados_completos, row.id_compra);
-      const linkFinal = row.link || construirLinkPortalPncp(infoPncp);
+      // O link antigo do ComprasNet (cnetmobile) hoje cai na home genérica de
+      // comprasgovernamentais.gov.br em vez de abrir a compra específica. A página
+      // da compra no PNCP (montada a partir de cnpj/ano/sequencial) é confiável e
+      // sempre existe pra qualquer compra publicada no PNCP, então tem prioridade.
+      const linkFinal = construirLinkPortalPncp(infoPncp) || row.link;
 
       return {
-      idCompra: row.id_compra,
-      uasg: row.uasg,
-      unidade: row.unidade,
-      orgao: row.orgao,
-      uf: row.uf,
-      municipio: row.municipio,
-      numeroPregao: row.numero_pregao,
-      anoPregao: row.ano_pregao,
-      modalidade: row.modalidade,
-      objeto: row.objeto,
-      situacao: row.situacao,
-      valorEstimado: row.valor_estimado,
-      dataAbertura: row.data_abertura,
-      dataEncerramento: row.data_encerramento,
-      link: linkFinal,
-      esfera: mapEsfera(row.dados_completos?.orgaoEntidadeEsferaId),
-      portal: derivarPortal(linkFinal),
-      linkArquivos: infoPncp
-        ? `/api/licitacoes/${encodeURIComponent(row.id_compra)}/arquivo`
-        : null,
-      criadoEm: row.criado_em,
-      atualizadoEm: row.atualizado_em,
-      favorito: !!favMap[row.id_compra],
-    }));
+        idCompra: row.id_compra,
+        uasg: row.uasg,
+        unidade: row.unidade,
+        orgao: row.orgao,
+        uf: row.uf,
+        municipio: row.municipio,
+        numeroPregao: row.numero_pregao,
+        anoPregao: row.ano_pregao,
+        modalidade: row.modalidade,
+        objeto: row.objeto,
+        situacao: row.situacao,
+        valorEstimado: row.valor_estimado,
+        dataAbertura: row.data_abertura,
+        dataEncerramento: row.data_encerramento,
+        link: linkFinal,
+        esfera: mapEsfera(row.dados_completos?.orgaoEntidadeEsferaId),
+        portal: derivarPortal(linkFinal),
+        linkArquivos: infoPncp
+          ? `/api/licitacoes/${encodeURIComponent(row.id_compra)}/arquivo`
+          : null,
+        criadoEm: row.criado_em,
+        atualizadoEm: row.atualizado_em,
+        favorito: !!favMap[row.id_compra],
+      };
+    });
 
     res.json({
       total: count || 0,
