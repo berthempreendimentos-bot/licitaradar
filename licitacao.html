@@ -814,6 +814,33 @@
       }
     }
 
+    // Link pra licitacao-compartilhada.html: página pública (sem login) que mostra
+    // só essa licitação, com o nome do site e o botão de baixar arquivos, pra poder
+    // enviar pra alguém que não tem conta no sistema.
+    async function compartilharLicitacao(item, btn) {
+      const url = `${window.location.origin}/licitacao-compartilhada.html?id=${encodeURIComponent(item.idCompra)}`;
+      const titulo = `Pregão ${item.numeroPregao}/${item.anoPregao} — ${item.orgao || item.unidade || 'Licitação'}`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: titulo, text: item.objeto || '', url });
+        } catch {
+          // usuário cancelou o share nativo — nada a fazer
+        }
+        return;
+      }
+
+      const conteudoOriginal = btn.innerHTML;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        window.prompt('Copie o link da licitação:', url);
+        return;
+      }
+      btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">check</span>Link copiado!';
+      setTimeout(() => { btn.innerHTML = conteudoOriginal; }, 1800);
+    }
+
     function renderResultados(itens) {
       resultsEl.innerHTML = '';
       itens.forEach((item) => {
@@ -883,6 +910,10 @@
               </div>
             </div>
             <div class="bid-card__botoes">
+              <button type="button" class="bid-card__btn bid-card__btn--secondary bid-card__btn-compartilhar">
+                <span class="material-symbols-outlined" aria-hidden="true">share</span>
+                Compartilhar
+              </button>
               <a class="bid-card__btn bid-card__btn--secondary" ${botaoArquivosAtributos} title="${temArquivos ? 'Baixar arquivos da licitação no PNCP' : 'Arquivos indisponíveis para esta licitação'}">
                 <span class="material-symbols-outlined" aria-hidden="true">download</span>
                 Baixar arquivos
@@ -897,6 +928,9 @@
 
         const starEl = card.querySelector('.fav-star');
         starEl.addEventListener('click', () => toggleFavorito(item, starEl));
+
+        const compartilharBtn = card.querySelector('.bid-card__btn-compartilhar');
+        compartilharBtn.addEventListener('click', () => compartilharLicitacao(item, compartilharBtn));
 
         resultsEl.appendChild(card);
       });

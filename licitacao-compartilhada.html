@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Licitação compartilhada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  body {
+    min-height: 100vh;
+  }
+
+  .share-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card-bg);
+  }
+
+  .share-header .brand-name {
+    font-weight: 800;
+    font-size: 19px;
+    color: var(--accent-solid);
+    letter-spacing: -0.02em;
+  }
+
+  .share-header .brand-tagline {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .share-header a {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .share-header a:hover {
+    background: var(--bg);
+  }
+
+  .share-main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  .share-status {
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 60px 0;
+  }
+
+  .share-status.error {
+    color: var(--danger);
+  }
+
+  .share-footer {
+    text-align: center;
+    margin-top: 28px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .share-footer a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .share-footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ---------- Card de licitação (mesmo estilo da página normal) ---------- */
+
+  .bid-card {
+    border-radius: 14px;
+    padding: 20px 24px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+
+  .bid-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .bid-card__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .bid-card__title .pregao,
+  .bid-card__title .uasg {
+    font-family: 'Hanken Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .bid-card__title .title-dot {
+    color: var(--border);
+    font-weight: 700;
+  }
+
+  .bid-card__linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .bid-card__linha .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .bid-card__linha strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .bid-card__local {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+  }
+
+  .bid-card__local .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .bid-card__objeto {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.5;
+    margin: 10px 0 14px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    line-height: 1.6;
+  }
+
+  .chip .material-symbols-outlined {
+    font-size: 14px;
+  }
+
+  .chip--situacao {
+    background: var(--help-bg);
+    color: var(--help-text);
+  }
+
+  .chip--modalidade {
+    background: var(--accent-tint);
+    color: var(--accent-solid);
+  }
+
+  .chip--esfera {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .chip--portal {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: normal;
+  }
+
+  .bid-card__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .bid-card__valores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+  }
+
+  .bid-card__valor-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bid-card__valor-item .material-symbols-outlined {
+    font-size: 19px;
+    color: var(--muted);
+    flex: none;
+  }
+
+  .bid-card__valor-texto {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  .bid-card__valor-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .bid-card__valor-valor {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .bid-card__valor-item--destaque .material-symbols-outlined {
+    color: var(--accent);
+  }
+
+  .bid-card__valor-item--destaque .bid-card__valor-valor {
+    font-size: 16px;
+    color: var(--accent-solid);
+  }
+
+  .bid-card__botoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .bid-card__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent-solid);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .bid-card__btn .material-symbols-outlined {
+    font-size: 17px;
+  }
+
+  .bid-card__btn:hover {
+    background: var(--accent-solid-hover);
+  }
+
+  .bid-card__btn[aria-disabled="true"] {
+    background: var(--border);
+    color: var(--muted);
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .bid-card__btn--secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .bid-card__btn--secondary:hover {
+    background: var(--bg);
+  }
+
+  .bid-card__btn--secondary[aria-disabled="true"] {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+  <header class="share-header">
+    <div>
+      <div class="brand-name">PEPACORP LICITA</div>
+      <div class="brand-tagline">Monitoramento de Licitações</div>
+    </div>
+    <a href="login.html">
+      <span class="material-symbols-outlined" aria-hidden="true">login</span>
+      Acessar o sistema
+    </a>
+  </header>
+
+  <main class="share-main">
+    <div id="conteudo">
+      <div class="share-status" id="statusEl">
+        <span class="spinner" aria-hidden="true"></span>Carregando licitação...
+      </div>
+    </div>
+    <p class="share-footer">
+      Recebeu este link e quer acompanhar outras licitações? <a href="login.html">Conheça o PEPACORP LICITA</a>.
+    </p>
+  </main>
+
+  <script>
+    function formatarMoeda(valor) {
+      if (valor === null || valor === undefined) return '—';
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function renderLicitacao(item) {
+      const temLink = !!item.link;
+      const botaoAtributos = temLink
+        ? `href="${item.link}" target="_blank" rel="noopener noreferrer"`
+        : `href="#" aria-disabled="true" tabindex="-1"`;
+
+      const temArquivos = !!item.linkArquivos;
+      const botaoArquivosAtributos = temArquivos
+        ? `href="${item.linkArquivos}" target="_blank" rel="noopener noreferrer"`
+        : `href="#" aria-disabled="true" tabindex="-1"`;
+
+      const orgaoEUnidadeIguais = item.unidade && item.orgao &&
+        item.unidade.trim().toLowerCase() === item.orgao.trim().toLowerCase();
+      const unidadeEhSoNumero = item.unidade && /^\d+$/.test(item.unidade.trim());
+      const orgaoTexto = item.orgao || item.unidade || 'Órgão não informado';
+      const unidadeTexto = (orgaoEUnidadeIguais || unidadeEhSoNumero) ? '' : item.unidade;
+
+      document.title = `Pregão ${item.numeroPregao}/${item.anoPregao} — PEPACORP LICITA`;
+
+      document.getElementById('conteudo').innerHTML = `
+        <div class="bid-card">
+          <div class="bid-card__top">
+            <div class="bid-card__title">
+              <span class="pregao">Pregão ${item.numeroPregao}/${item.anoPregao}</span>
+              <span class="title-dot" aria-hidden="true">•</span>
+              <span class="uasg">UASG ${item.uasg}</span>
+            </div>
+          </div>
+
+          <div class="bid-card__linha">
+            <span class="material-symbols-outlined" aria-hidden="true">account_balance</span>
+            <span><strong>${orgaoTexto}</strong>${unidadeTexto ? ' — ' + unidadeTexto : ''}</span>
+            ${item.municipio ? `<span class="bid-card__local"><span class="material-symbols-outlined" aria-hidden="true">location_on</span>${item.municipio}${item.uf ? '/' + item.uf : ''}</span>` : ''}
+          </div>
+
+          <p class="bid-card__objeto">${item.objeto || 'Sem descrição do objeto.'}</p>
+
+          <div class="chip-row">
+            <span class="chip chip--situacao">${item.situacao || 'Situação não informada'}</span>
+            ${item.modalidade ? `<span class="chip chip--modalidade">${item.modalidade}</span>` : ''}
+            ${item.esfera ? `<span class="chip chip--esfera">${item.esfera}</span>` : ''}
+            ${item.portal ? `<span class="chip chip--portal"><span class="material-symbols-outlined" aria-hidden="true">storefront</span>${item.portal}</span>` : ''}
+          </div>
+
+          <div class="bid-card__footer">
+            <div class="bid-card__valores">
+              <div class="bid-card__valor-item bid-card__valor-item--destaque">
+                <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+                <div class="bid-card__valor-texto">
+                  <span class="bid-card__valor-label">Valor estimado</span>
+                  <span class="bid-card__valor-valor">${formatarMoeda(item.valorEstimado)}</span>
+                </div>
+              </div>
+              <div class="bid-card__valor-item">
+                <span class="material-symbols-outlined" aria-hidden="true">event</span>
+                <div class="bid-card__valor-texto">
+                  <span class="bid-card__valor-label">Abertura</span>
+                  <span class="bid-card__valor-valor">${formatarData(item.dataAbertura)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="bid-card__botoes">
+              <a class="bid-card__btn bid-card__btn--secondary" ${botaoArquivosAtributos} title="${temArquivos ? 'Baixar arquivos da licitação no PNCP' : 'Arquivos indisponíveis para esta licitação'}">
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                Baixar arquivos
+              </a>
+              <a class="bid-card__btn" ${botaoAtributos}>
+                <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+                ${temLink ? 'Portal da licitação' : 'Link indisponível'}
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function carregar() {
+      const id = new URLSearchParams(window.location.search).get('id');
+      const conteudoEl = document.getElementById('conteudo');
+
+      if (!id) {
+        conteudoEl.innerHTML = '<div class="share-status error">Link inválido: nenhuma licitação informada.</div>';
+        return;
+      }
+
+      try {
+        const resp = await fetch(`/api/publico/licitacoes/${encodeURIComponent(id)}`);
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Não foi possível carregar a licitação.');
+        renderLicitacao(dados);
+      } catch (err) {
+        conteudoEl.innerHTML = `<div class="share-status error">${err.message}</div>`;
+      }
+    }
+
+    carregar();
+  </script>
+</body>
+</html>

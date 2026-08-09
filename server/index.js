@@ -8,7 +8,7 @@ const { getSupabase } = require('./src/supabaseClient');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const ROTAS_PUBLICAS = new Set(['/login.html', '/api/login', '/style.css']);
+const ROTAS_PUBLICAS = new Set(['/login.html', '/api/login', '/style.css', '/licitacao-compartilhada.html']);
 
 const ESFERA_LABELS = { F: 'Federal', E: 'Estadual', M: 'Municipal', D: 'Distrital' };
 
@@ -65,6 +65,42 @@ function construirLinkPortalPncp(info) {
   return `https://pncp.gov.br/app/editais/${info.cnpj}/${info.ano}/${info.sequencial}`;
 }
 
+// Monta o formato de licitação usado tanto na busca autenticada quanto na página
+// pública de compartilhamento — mantém as duas fontes em sincronia.
+function mapearLicitacao(row) {
+  const infoPncp = extrairCnpjAnoSequencial(row.dados_completos, row.id_compra);
+  // O link antigo do ComprasNet (cnetmobile) hoje cai na home genérica de
+  // comprasgovernamentais.gov.br em vez de abrir a compra específica. A página
+  // da compra no PNCP (montada a partir de cnpj/ano/sequencial) é confiável e
+  // sempre existe pra qualquer compra publicada no PNCP, então tem prioridade.
+  const linkFinal = construirLinkPortalPncp(infoPncp) || row.link;
+
+  return {
+    idCompra: row.id_compra,
+    uasg: row.uasg,
+    unidade: row.unidade,
+    orgao: row.orgao,
+    uf: row.uf,
+    municipio: row.municipio,
+    numeroPregao: row.numero_pregao,
+    anoPregao: row.ano_pregao,
+    modalidade: row.modalidade,
+    objeto: row.objeto,
+    situacao: row.situacao,
+    valorEstimado: row.valor_estimado,
+    dataAbertura: row.data_abertura,
+    dataEncerramento: row.data_encerramento,
+    link: linkFinal,
+    esfera: mapEsfera(row.dados_completos?.orgaoEntidadeEsferaId),
+    portal: derivarPortal(linkFinal),
+    linkArquivos: infoPncp
+      ? `/api/licitacoes/${encodeURIComponent(row.id_compra)}/arquivo`
+      : null,
+    criadoEm: row.criado_em,
+    atualizadoEm: row.atualizado_em,
+  };
+}
+
 function exigirLogin(req, res, next) {
   if (ROTAS_PUBLICAS.has(req.path)) return next();
   
@@ -75,6 +111,11 @@ function exigirLogin(req, res, next) {
   // O robo marca a licitacao como revogada quando a pagina de mensagens nao abre
   // (ver marcar_como_revogada em monitor_mensagens.py) - tambem sem sessao de usuario.
   if (/^\/api\/monitorados\/[^/]+\/situacao$/.test(req.path) && req.method === 'PATCH') return next();
+  // Página de compartilhamento (licitacao-compartilhada.html): dados de uma única
+  // licitação e o download do edital ficam públicos pra quem recebe o link poder
+  // ver sem precisar de conta — mesma informação que já é pública no PNCP.
+  if (req.path.startsWith('/api/publico/') && req.method === 'GET') return next();
+  if (/^\/api\/licitacoes\/[^/]+\/arquivo$/.test(req.path) && req.method === 'GET') return next();
 
   if (req.session && req.session.usuarioId) return next();
   if (req.path.startsWith('/api/')) {
@@ -563,40 +604,10 @@ app.get('/api/licitacoes/busca', async (req, res) => {
 
     if (error) throw error;
 
-    const itens = (data || []).map((row) => {
-      const infoPncp = extrairCnpjAnoSequencial(row.dados_completos, row.id_compra);
-      // O link antigo do ComprasNet (cnetmobile) hoje cai na home genérica de
-      // comprasgovernamentais.gov.br em vez de abrir a compra específica. A página
-      // da compra no PNCP (montada a partir de cnpj/ano/sequencial) é confiável e
-      // sempre existe pra qualquer compra publicada no PNCP, então tem prioridade.
-      const linkFinal = construirLinkPortalPncp(infoPncp) || row.link;
-
-      return {
-        idCompra: row.id_compra,
-        uasg: row.uasg,
-        unidade: row.unidade,
-        orgao: row.orgao,
-        uf: row.uf,
-        municipio: row.municipio,
-        numeroPregao: row.numero_pregao,
-        anoPregao: row.ano_pregao,
-        modalidade: row.modalidade,
-        objeto: row.objeto,
-        situacao: row.situacao,
-        valorEstimado: row.valor_estimado,
-        dataAbertura: row.data_abertura,
-        dataEncerramento: row.data_encerramento,
-        link: linkFinal,
-        esfera: mapEsfera(row.dados_completos?.orgaoEntidadeEsferaId),
-        portal: derivarPortal(linkFinal),
-        linkArquivos: infoPncp
-          ? `/api/licitacoes/${encodeURIComponent(row.id_compra)}/arquivo`
-          : null,
-        criadoEm: row.criado_em,
-        atualizadoEm: row.atualizado_em,
-        favorito: !!favMap[row.id_compra],
-      };
-    });
+    const itens = (data || []).map((row) => ({
+      ...mapearLicitacao(row),
+      favorito: !!favMap[row.id_compra],
+    }));
 
     res.json({
       total: count || 0,
@@ -607,6 +618,32 @@ app.get('/api/licitacoes/busca', async (req, res) => {
   } catch (erro) {
     console.error('Erro ao buscar licitações no Supabase:', erro.message);
     res.status(502).json({ erro: 'Não foi possível buscar as licitações agora.' });
+  }
+});
+
+// Rota pública (sem login, ver exigirLogin) usada pela página de compartilhamento
+// de card: devolve só a licitação pedida, sem busca/listagem, pra não expor a
+// base toda a quem não tem conta — só quem já tem o link específico.
+app.get('/api/publico/licitacoes/:idCompra', async (req, res) => {
+  const { idCompra } = req.params;
+
+  try {
+    const supabase = getSupabase();
+    const { data: row, error } = await supabase
+      .from('licitacoes_pncp')
+      .select('*')
+      .eq('id_compra', idCompra)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!row) {
+      return res.status(404).json({ erro: 'Licitação não encontrada.' });
+    }
+
+    res.json(mapearLicitacao(row));
+  } catch (erro) {
+    console.error('Erro ao buscar licitação pública no Supabase:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível carregar a licitação agora.' });
   }
 });
 
