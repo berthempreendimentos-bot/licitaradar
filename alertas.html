@@ -40,8 +40,62 @@
     gap: 8px;
   }
 
+  .palavra-preset-select {
+    width: 100%;
+  }
+
   .palavra-form input {
     flex: 1;
+  }
+
+  .palavra-input-wrap {
+    position: relative;
+    flex: 1;
+  }
+
+  .palavra-recentes {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px var(--shadow);
+    padding: 6px;
+    display: none;
+    z-index: 10;
+  }
+
+  .palavra-recentes.aberto {
+    display: block;
+  }
+
+  .palavra-recentes-titulo {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 4px 6px 6px;
+  }
+
+  .palavra-recentes button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 7px 8px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .palavra-recentes button:hover {
+    background: var(--bg);
   }
 
   .palavra-tipo-select {
@@ -208,9 +262,19 @@
       <div class="col-palavras card">
         <h3 style="margin-top:0;">Palavras-chave</h3>
         <form class="palavra-form" id="palavraForm">
+          <label class="sr-only" for="palavraPreset">Selecionar palavra-chave comum</label>
+          <select id="palavraPreset" class="palavra-tipo-select palavra-preset-select">
+            <option value="">Selecionar rapidamente…</option>
+            <option value="Mão de obra">Mão de obra</option>
+            <option value="Edital">Edital</option>
+            <option value="__outra__">Outra (digitar abaixo)…</option>
+          </select>
           <div class="palavra-form-row">
-            <label class="sr-only" for="novaPalavra">Nova palavra-chave</label>
-            <input type="text" id="novaPalavra" class="text-input" placeholder="Ex.: suspensa" autocomplete="off">
+            <div class="palavra-input-wrap">
+              <label class="sr-only" for="novaPalavra">Nova palavra-chave</label>
+              <input type="text" id="novaPalavra" class="text-input" placeholder="Ex.: suspensa" autocomplete="off">
+              <div class="palavra-recentes" id="palavraRecentes"></div>
+            </div>
             <button class="monitor-btn" type="submit">+</button>
           </div>
           <label class="sr-only" for="tipoNotificacao">Tipo de notificação</label>
@@ -273,8 +337,7 @@
     }
 
     const saved = localStorage.getItem('radar-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+    applyTheme(saved || 'light');
 
     toggle.addEventListener('click', () => {
       const current = root.getAttribute('data-theme');
@@ -297,7 +360,61 @@
 
     const palavraForm = document.getElementById('palavraForm');
     const novaPalavraInput = document.getElementById('novaPalavra');
+    const palavraPresetSelect = document.getElementById('palavraPreset');
+    const palavraRecentesEl = document.getElementById('palavraRecentes');
     const palavrasListaEl = document.getElementById('palavrasLista');
+
+    // ---------- Últimas palavras-chave escolhidas (histórico local, por navegador) ----------
+
+    const RECENTES_KEY = 'radar-palavras-recentes';
+    const MAX_RECENTES = 6;
+
+    function obterRecentes() {
+      try {
+        return JSON.parse(localStorage.getItem(RECENTES_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function registrarRecente(termo) {
+      const atuais = obterRecentes().filter((t) => t.toLowerCase() !== termo.toLowerCase());
+      atuais.unshift(termo);
+      localStorage.setItem(RECENTES_KEY, JSON.stringify(atuais.slice(0, MAX_RECENTES)));
+    }
+
+    function renderRecentes() {
+      const recentes = obterRecentes();
+      if (recentes.length === 0) {
+        palavraRecentesEl.innerHTML = '';
+        return false;
+      }
+      palavraRecentesEl.innerHTML =
+        '<div class="palavra-recentes-titulo">Últimas escolhidas</div>' +
+        recentes.map((t) => `<button type="button" data-termo="${t}">${t}</button>`).join('');
+      palavraRecentesEl.querySelectorAll('button[data-termo]').forEach((btn) => {
+        // mousedown (não click) dispara antes do blur do input, senão o menu
+        // fecharia antes do clique no botão ser registrado.
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          adicionarPalavra(btn.dataset.termo);
+          fecharRecentes();
+        });
+      });
+      return true;
+    }
+
+    function abrirRecentes() {
+      if (renderRecentes()) palavraRecentesEl.classList.add('aberto');
+    }
+
+    function fecharRecentes() {
+      palavraRecentesEl.classList.remove('aberto');
+    }
+
+    novaPalavraInput.addEventListener('focus', abrirRecentes);
+    novaPalavraInput.addEventListener('click', abrirRecentes);
+    novaPalavraInput.addEventListener('blur', () => setTimeout(fecharRecentes, 120));
 
     async function carregarPalavras() {
       try {
@@ -339,19 +456,36 @@
 
     const tipoNotificacaoSelect = document.getElementById('tipoNotificacao');
 
-    palavraForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const termo = novaPalavraInput.value.trim();
-      if (!termo) return;
-
+    async function adicionarPalavra(termo) {
       await fetch('/api/palavras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ termo, tipoNotificacao: tipoNotificacaoSelect.value }),
       });
+      registrarRecente(termo);
       novaPalavraInput.value = '';
       tipoNotificacaoSelect.value = 'padrao';
       carregarPalavras();
+    }
+
+    palavraForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const termo = novaPalavraInput.value.trim();
+      if (!termo) return;
+      adicionarPalavra(termo);
+    });
+
+    // Atalho pra termos comuns: escolher "Mão de obra" ou "Edital" já cadastra
+    // direto; "Outra" só devolve o foco pro campo de texto, sem enviar nada.
+    palavraPresetSelect.addEventListener('change', () => {
+      const valor = palavraPresetSelect.value;
+      palavraPresetSelect.value = '';
+      if (!valor) return;
+      if (valor === '__outra__') {
+        novaPalavraInput.focus();
+        return;
+      }
+      adicionarPalavra(valor);
     });
 
     // ---------- Alertas ----------

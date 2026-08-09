@@ -195,8 +195,7 @@
     }
 
     const saved = localStorage.getItem('radar-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+    applyTheme(saved || 'light');
 
     toggle.addEventListener('click', () => {
       const current = root.getAttribute('data-theme');

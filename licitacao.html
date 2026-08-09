@@ -201,7 +201,7 @@
 
   .bid-card {
     border-radius: 14px;
-    padding: 18px 22px;
+    padding: 20px 24px;
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
@@ -216,23 +216,18 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
+    margin-bottom: 10px;
   }
 
   .bid-card__title {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 4px 24px;
-    margin: 0 0 8px;
+    gap: 8px;
+    margin: 0;
   }
 
-  .bid-card__title .pregao {
-    font-family: 'Hanken Grotesk', sans-serif;
-    font-weight: 800;
-    font-size: 16px;
-    color: var(--text);
-  }
-
+  .bid-card__title .pregao,
   .bid-card__title .uasg {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 800;
@@ -240,8 +235,43 @@
     color: var(--text);
   }
 
+  .bid-card__title .title-dot {
+    color: var(--border);
+    font-weight: 700;
+  }
+
+  .bid-card__top-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+  }
+
+  .bid-card__prazo {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .bid-card__prazo--urgente {
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    color: var(--danger);
+  }
+
+  .bid-card__prazo--proxima {
+    background: var(--accent-tint);
+    color: var(--accent-solid);
+  }
+
   .bid-card__linha {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
     font-size: 13px;
@@ -276,17 +306,30 @@
   }
 
   .bid-card__objeto {
-    font-size: 16px;
+    font-size: 14px;
+    font-weight: 400;
     color: var(--text);
     line-height: 1.45;
-    margin: 10px 0 12px;
+    margin: 10px 0 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .bid-card__objeto mark {
+    background: var(--accent-tint);
+    color: var(--accent-solid);
+    padding: 0 3px;
+    border-radius: 3px;
+    font-weight: 800;
   }
 
   .chip-row {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
 
   .chip {
@@ -311,6 +354,17 @@
     color: var(--help-text);
   }
 
+  .chip--modalidade {
+    background: var(--accent-tint);
+    color: var(--accent-solid);
+  }
+
+  .chip--esfera {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
   .chip--portal {
     background: transparent;
     border: 1px solid var(--border);
@@ -325,21 +379,56 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding-top: 12px;
+    gap: 14px;
+    padding-top: 14px;
     border-top: 1px solid var(--border);
   }
 
   .bid-card__valores {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 18px;
-    font-size: 13px;
+    gap: 10px 24px;
+  }
+
+  .bid-card__valor-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bid-card__valor-item .material-symbols-outlined {
+    font-size: 19px;
+    color: var(--muted);
+    flex: none;
+  }
+
+  .bid-card__valor-texto {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  .bid-card__valor-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--muted);
   }
 
-  .bid-card__valores strong {
+  .bid-card__valor-valor {
+    font-size: 13.5px;
+    font-weight: 700;
     color: var(--text);
+  }
+
+  .bid-card__valor-item--destaque .material-symbols-outlined {
+    color: var(--accent);
+  }
+
+  .bid-card__valor-item--destaque .bid-card__valor-valor {
+    font-size: 16px;
+    color: var(--accent-solid);
   }
 
   .bid-card__botoes {
@@ -568,6 +657,11 @@
               <input type="checkbox" id="favorito">
               <label for="favorito">Apenas Favoritos ★</label>
             </div>
+
+            <div class="field checkbox-field">
+              <input type="checkbox" id="filtroMaoDeObra">
+              <label for="filtroMaoDeObra">Mão de obra (no objeto)</label>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -613,8 +707,7 @@
     }
 
     const savedTheme = localStorage.getItem('radar-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+    applyTheme(savedTheme || 'light');
 
     themeToggle.addEventListener('click', () => {
       const current = root.getAttribute('data-theme');
@@ -626,6 +719,24 @@
     const statusMsg = document.getElementById('statusMsg');
     const resultsEl = document.getElementById('results');
     const paginationEl = document.getElementById('pagination');
+    const objetoInput = document.getElementById('objeto');
+    const filtroMaoDeObraEl = document.getElementById('filtroMaoDeObra');
+
+    const TERMO_MAO_DE_OBRA = 'mão de obra';
+
+    // Atalho "Mão de obra": preenche a Palavra no Objeto com o termo; desmarcar só
+    // limpa o campo se ele ainda estiver com esse termo (não mexe em busca manual).
+    filtroMaoDeObraEl.addEventListener('change', () => {
+      if (filtroMaoDeObraEl.checked) {
+        objetoInput.value = TERMO_MAO_DE_OBRA;
+      } else if (objetoInput.value.trim().toLowerCase() === TERMO_MAO_DE_OBRA) {
+        objetoInput.value = '';
+      }
+    });
+
+    objetoInput.addEventListener('input', () => {
+      filtroMaoDeObraEl.checked = objetoInput.value.trim().toLowerCase() === TERMO_MAO_DE_OBRA;
+    });
 
     let paginaAtual = 1;
     const limitePorPagina = 10;
@@ -639,6 +750,44 @@
       if (!iso) return '—';
       const d = new Date(iso);
       return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    // Só sinaliza urgência para aberturas futuras dentro de uma janela de 7 dias;
+    // aberturas distantes ou já passadas não ganham destaque (o chip de situação já cobre isso).
+    function prazoAbertura(iso) {
+      if (!iso) return null;
+      const diffDias = Math.round((new Date(iso) - new Date()) / 86400000);
+      if (diffDias < 0) return null;
+      if (diffDias === 0) return { texto: 'Abre hoje', classe: 'urgente' };
+      if (diffDias === 1) return { texto: 'Abre amanhã', classe: 'urgente' };
+      if (diffDias <= 3) return { texto: `Em ${diffDias} dias`, classe: 'urgente' };
+      if (diffDias <= 7) return { texto: `Em ${diffDias} dias`, classe: 'proxima' };
+      return null;
+    }
+
+    // Palavras-chave cadastradas em Alertas (ver alertas.html) são carregadas aqui só
+    // pra destacar no objeto quais licitações bateram com o que o usuário monitora.
+    let palavrasChave = [];
+    // Termo digitado/escolhido em "Palavra no Objeto" na última pesquisa (ex.: "mão de
+    // obra" via atalho) — também entra no destaque, além das palavras-chave de Alertas.
+    let termoObjetoBusca = '';
+
+    async function carregarPalavrasChave() {
+      try {
+        const resp = await fetch('/api/palavras');
+        const dados = await resp.json();
+        if (resp.ok) palavrasChave = (dados.itens || []).map((p) => p.termo).filter(Boolean);
+      } catch {
+        palavrasChave = [];
+      }
+    }
+
+    function destacarPalavrasChave(texto) {
+      const termos = [...palavrasChave, termoObjetoBusca].filter(Boolean);
+      if (!texto || termos.length === 0) return texto || '';
+      const escapadas = termos.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const re = new RegExp(`(${escapadas.join('|')})`, 'ig');
+      return texto.replace(re, '<mark>$1</mark>');
     }
 
     async function toggleFavorito(item, starEl) {
@@ -686,34 +835,52 @@
         const unidadeEhSoNumero = item.unidade && /^\d+$/.test(item.unidade.trim());
         const orgaoTexto = item.orgao || item.unidade || 'Órgão não informado';
         const unidadeTexto = (orgaoEUnidadeIguais || unidadeEhSoNumero) ? '' : item.unidade;
+        const prazo = prazoAbertura(item.dataAbertura);
 
         card.innerHTML = `
           <div class="bid-card__top">
             <div class="bid-card__title">
               <span class="pregao">Pregão ${item.numeroPregao}/${item.anoPregao}</span>
+              <span class="title-dot" aria-hidden="true">•</span>
               <span class="uasg">UASG ${item.uasg}</span>
             </div>
-            <span class="material-symbols-outlined fav-star ${item.favorito ? 'active' : ''}" title="${item.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">${item.favorito ? 'star' : 'star_rate'}</span>
+            <div class="bid-card__top-right">
+              ${prazo ? `<span class="bid-card__prazo bid-card__prazo--${prazo.classe}">${prazo.texto}</span>` : ''}
+              <span class="material-symbols-outlined fav-star ${item.favorito ? 'active' : ''}" title="${item.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">${item.favorito ? 'star' : 'star_rate'}</span>
+            </div>
           </div>
 
           <div class="bid-card__linha">
             <span class="material-symbols-outlined" aria-hidden="true">account_balance</span>
             <span><strong>${orgaoTexto}</strong>${unidadeTexto ? ' — ' + unidadeTexto : ''}</span>
-            ${item.esfera ? `<span class="bid-card__local">${item.esfera}</span>` : ''}
             ${item.municipio ? `<span class="bid-card__local"><span class="material-symbols-outlined" aria-hidden="true">location_on</span>${item.municipio}${item.uf ? '/' + item.uf : ''}</span>` : ''}
           </div>
 
-          <p class="bid-card__objeto">${item.objeto || 'Sem descrição do objeto.'}</p>
+          <p class="bid-card__objeto">${destacarPalavrasChave(item.objeto) || 'Sem descrição do objeto.'}</p>
 
           <div class="chip-row">
             <span class="chip chip--situacao">${item.situacao || 'Situação não informada'}</span>
+            ${item.modalidade ? `<span class="chip chip--modalidade">${item.modalidade}</span>` : ''}
+            ${item.esfera ? `<span class="chip chip--esfera">${item.esfera}</span>` : ''}
             ${item.portal ? `<span class="chip chip--portal"><span class="material-symbols-outlined" aria-hidden="true">storefront</span>${item.portal}</span>` : ''}
           </div>
 
           <div class="bid-card__footer">
             <div class="bid-card__valores">
-              <span><strong>Valor Estimado:</strong> ${formatarMoeda(item.valorEstimado)}</span>
-              <span><strong>Abertura:</strong> ${formatarData(item.dataAbertura)}</span>
+              <div class="bid-card__valor-item bid-card__valor-item--destaque">
+                <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+                <div class="bid-card__valor-texto">
+                  <span class="bid-card__valor-label">Valor estimado</span>
+                  <span class="bid-card__valor-valor">${formatarMoeda(item.valorEstimado)}</span>
+                </div>
+              </div>
+              <div class="bid-card__valor-item">
+                <span class="material-symbols-outlined" aria-hidden="true">event</span>
+                <div class="bid-card__valor-texto">
+                  <span class="bid-card__valor-label">Abertura</span>
+                  <span class="bid-card__valor-valor">${formatarData(item.dataAbertura)}</span>
+                </div>
+              </div>
             </div>
             <div class="bid-card__botoes">
               <a class="bid-card__btn bid-card__btn--secondary" ${botaoArquivosAtributos} title="${temArquivos ? 'Baixar arquivos da licitação no PNCP' : 'Arquivos indisponíveis para esta licitação'}">
@@ -740,9 +907,12 @@
       const totalPaginas = Math.ceil(totalItens / limitePorPagina);
       if (totalPaginas <= 1) return;
 
-      const irParaPagina = (p) => {
+      const irParaPagina = async (p) => {
         paginaAtual = Math.min(Math.max(1, p), totalPaginas);
-        pesquisar(false);
+        // Espera os cards da nova página renderizarem antes de rolar: rolar antes
+        // mede a posição de um .results ainda vazio e erra o alvo.
+        await pesquisar(false);
+        resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
 
       const criarBotao = (rotulo, destino, { ariaLabel, ativo, desabilitado } = {}) => {
@@ -821,6 +991,7 @@
       const uasg = document.getElementById('uasg').value.trim();
       const pregao = document.getElementById('pregao').value.trim();
       const objeto = document.getElementById('objeto').value.trim();
+      termoObjetoBusca = objeto;
       const situacao = document.getElementById('situacao').value;
       const esfera = document.getElementById('esfera').value;
       const modalidade = document.getElementById('modalidade').value;
@@ -894,7 +1065,7 @@
 
     document.getElementById('dataAberturaInicio').value = inicioJanela.toISOString().slice(0, 10);
     document.getElementById('dataAberturaFim').value = fimJanela.toISOString().slice(0, 10);
-    pesquisar(true);
+    carregarPalavrasChave().then(() => pesquisar(true));
   </script>
 </body>
 </html>
