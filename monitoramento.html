@@ -316,7 +316,7 @@
   }
 
   .detail-objeto {
-    font-size: 13.5px;
+    font-size: 16px;
     color: var(--text);
     line-height: 1.5;
     margin-bottom: 14px;
@@ -557,7 +557,7 @@
         <div class="monitor-detail-header">
           <div>
             <h3>UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}</h3>
-            <div class="monitor-detail-orgao">${item.orgao || item.unidade || 'Órgão não informado'}</div>
+            <div class="monitor-detail-orgao">${item.orgao || item.unidade || 'Órgão não informado'} ${item.municipio ? `— ${item.municipio}/${item.uf || ''}` : ''}</div>
           </div>
           <div class="monitor-detail-acoes">
             <button type="button" class="acao-btn favoritar${item.favorito ? ' ativo' : ''}" id="btnFavoritar" title="${item.favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}" aria-pressed="${item.favorito ? 'true' : 'false'}" aria-label="${item.favorito ? 'Remover dos favoritos' : 'Marcar como favorito'}">
@@ -622,7 +622,7 @@
       const novoValor = !item.favorito;
       btn.disabled = true;
       try {
-        const resp = await fetch(`/api/monitorados/${item.idCompra}/favorito`, {
+        const resp = await fetch(`/api/monitorados/${encodeURIComponent(item.idCompra)}/favorito`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ favorito: novoValor }),
@@ -650,7 +650,7 @@
       const btn = document.getElementById('btnExcluir');
       btn.disabled = true;
       try {
-        const resp = await fetch(`/api/monitorados/${item.idCompra}`, { method: 'DELETE' });
+        const resp = await fetch(`/api/monitorados/${encodeURIComponent(item.idCompra)}`, { method: 'DELETE' });
         const dados = await resp.json();
         if (!resp.ok) throw new Error(dados.erro || 'Falha ao excluir pregão.');
 
@@ -669,7 +669,7 @@
       if (!listaEl) return;
 
       try {
-        const resp = await fetch(`/api/mensagens/${idCompra}`);
+        const resp = await fetch(`/api/mensagens/${encodeURIComponent(idCompra)}`);
         const dados = await resp.json();
         if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar mensagens.');
 

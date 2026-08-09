@@ -187,9 +187,8 @@
         card.innerHTML = `
           <h3>UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}</h3>
           <div class="result-meta">
-            <span><strong>Órgão:</strong> ${item.orgao || '—'}</span>
+            <span><strong>Órgão:</strong> ${item.orgao || '—'} ${item.municipio ? `(${item.municipio}/${item.uf || ''})` : ''}</span>
             <span><strong>Unidade:</strong> ${item.unidade || '—'}</span>
-            <span><strong>UF:</strong> ${item.uf || '—'}</span>
           </div>
           <div class="result-objeto">${item.objeto || 'Sem descrição do objeto.'}</div>
           <div class="result-meta">

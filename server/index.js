@@ -10,6 +10,61 @@ const PORT = process.env.PORT || 3001;
 
 const ROTAS_PUBLICAS = new Set(['/login.html', '/api/login', '/style.css']);
 
+const ESFERA_LABELS = { F: 'Federal', E: 'Estadual', M: 'Municipal', D: 'Distrital' };
+
+function mapEsfera(esferaId) {
+  return ESFERA_LABELS[esferaId] || null;
+}
+
+function derivarPortal(link) {
+  if (!link) return null;
+  let host;
+  try {
+    host = new URL(link).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+  if (host.includes('serpro.gov.br') || host.includes('comprasnet')) return 'ComprasNet';
+  if (host.includes('bb.com.br')) return 'Licitações-e (BB)';
+  if (host.includes('bbmnetlicitacoes')) return 'BBMNET';
+  if (host.includes('bllcompras')) return 'BLL Compras';
+  if (host.includes('pncp.gov.br')) return 'PNCP';
+  if (host.includes('compras.gov.br')) return 'Compras.gov.br';
+  return host;
+}
+
+// numeroControlePNCP tem o formato {cnpj}-{tipo}-{sequencial}/{ano}, ex.:
+// "11151460000137-1-000033/2026". Vários registros usam esse valor como id_compra.
+const REGEX_NUMERO_CONTROLE_PNCP = /^(\d{14})-\d+-(\d+)\/(\d{4})$/;
+
+// Extrai cnpj/ano/sequencial da compra. Tenta primeiro os campos planos do
+// dados_completos (import antigo via compras.gov.br) e, se não existirem, extrai
+// diretamente do id_compra (formato numeroControlePNCP).
+function extrairCnpjAnoSequencial(dadosCompletos, idCompra) {
+  let cnpj = dadosCompletos?.orgaoEntidadeCnpj;
+  let ano = dadosCompletos?.anoCompraPncp;
+  let sequencial = dadosCompletos?.sequencialCompraPncp;
+
+  if ((!cnpj || !ano || !sequencial) && idCompra) {
+    const match = REGEX_NUMERO_CONTROLE_PNCP.exec(idCompra);
+    if (match) {
+      cnpj = match[1];
+      sequencial = Number(match[2]);
+      ano = match[3];
+    }
+  }
+
+  if (!cnpj || !ano || !sequencial) return null;
+  return { cnpj, ano, sequencial: Number(sequencial) };
+}
+
+// Fallback pra quando não existe link salvo pro portal de origem: manda pra
+// página da compra no próprio Portal PNCP.
+function construirLinkPortalPncp(info) {
+  if (!info) return null;
+  return `https://pncp.gov.br/app/editais/${info.cnpj}/${info.ano}/${info.sequencial}`;
+}
+
 function exigirLogin(req, res, next) {
   if (ROTAS_PUBLICAS.has(req.path)) return next();
   
@@ -412,6 +467,7 @@ app.get('/api/licitacoes/busca', async (req, res) => {
     objeto,
     situacao,
     modalidade,
+    esfera,
     favorito,
     ordenacao = 'data_abertura',
     direcao = 'desc',
@@ -472,6 +528,9 @@ app.get('/api/licitacoes/busca', async (req, res) => {
     if (modalidade && modalidade.trim() && modalidade !== 'TODOS') {
       query = query.ilike('modalidade', `%${modalidade.trim()}%`);
     }
+    if (esfera && ESFERA_LABELS[esfera.trim()]) {
+      query = query.eq('dados_completos->>orgaoEntidadeEsferaId', esfera.trim());
+    }
     if (favorito === 'true') {
       const favIds = Object.keys(favMap).filter((id) => favMap[id] === true);
       if (favIds.length === 0) {
@@ -504,7 +563,11 @@ app.get('/api/licitacoes/busca', async (req, res) => {
 
     if (error) throw error;
 
-    const itens = (data || []).map((row) => ({
+    const itens = (data || []).map((row) => {
+      const infoPncp = extrairCnpjAnoSequencial(row.dados_completos, row.id_compra);
+      const linkFinal = row.link || construirLinkPortalPncp(infoPncp);
+
+      return {
       idCompra: row.id_compra,
       uasg: row.uasg,
       unidade: row.unidade,
@@ -519,7 +582,12 @@ app.get('/api/licitacoes/busca', async (req, res) => {
       valorEstimado: row.valor_estimado,
       dataAbertura: row.data_abertura,
       dataEncerramento: row.data_encerramento,
-      link: row.link,
+      link: linkFinal,
+      esfera: mapEsfera(row.dados_completos?.orgaoEntidadeEsferaId),
+      portal: derivarPortal(linkFinal),
+      linkArquivos: infoPncp
+        ? `/api/licitacoes/${encodeURIComponent(row.id_compra)}/arquivo`
+        : null,
       criadoEm: row.criado_em,
       atualizadoEm: row.atualizado_em,
       favorito: !!favMap[row.id_compra],
@@ -534,6 +602,52 @@ app.get('/api/licitacoes/busca', async (req, res) => {
   } catch (erro) {
     console.error('Erro ao buscar licitações no Supabase:', erro.message);
     res.status(502).json({ erro: 'Não foi possível buscar as licitações agora.' });
+  }
+});
+
+// Resolve o arquivo (edital) da licitação direto na API do PNCP e redireciona pra
+// URL de download real, em vez de mandar o usuário pra página de listagem no portal.
+app.get('/api/licitacoes/:idCompra/arquivo', async (req, res) => {
+  const { idCompra } = req.params;
+
+  try {
+    const supabase = getSupabase();
+    const { data: row, error } = await supabase
+      .from('licitacoes_pncp')
+      .select('id_compra, dados_completos')
+      .eq('id_compra', idCompra)
+      .single();
+
+    if (error || !row) {
+      return res.status(404).send('Licitação não encontrada.');
+    }
+
+    const info = extrairCnpjAnoSequencial(row.dados_completos, row.id_compra);
+    if (!info) {
+      return res.status(404).send('Não foi possível localizar os arquivos desta licitação no PNCP.');
+    }
+
+    const respostaPncp = await fetch(
+      `https://pncp.gov.br/api/pncp/v1/orgaos/${info.cnpj}/compras/${info.ano}/${info.sequencial}/arquivos`,
+      { headers: { Accept: 'application/json' } }
+    );
+
+    if (!respostaPncp.ok) {
+      return res.status(502).send('Não foi possível consultar os arquivos no PNCP agora.');
+    }
+
+    const documentos = await respostaPncp.json();
+    const primeiroDocumento = Array.isArray(documentos) ? documentos[0] : null;
+    const urlArquivo = primeiroDocumento?.uri || primeiroDocumento?.url;
+
+    if (!urlArquivo) {
+      return res.status(404).send('Nenhum arquivo disponível para esta licitação no PNCP.');
+    }
+
+    res.redirect(urlArquivo);
+  } catch (erro) {
+    console.error('Erro ao buscar arquivo da licitação no PNCP:', erro.message);
+    res.status(502).send('Não foi possível baixar o arquivo agora.');
   }
 });
 

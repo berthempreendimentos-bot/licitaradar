@@ -171,13 +171,6 @@
     cursor: pointer;
   }
 
-  .result-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
   .fav-star {
     font-size: 20px;
     color: var(--muted);
@@ -202,6 +195,207 @@
 
   [data-theme="dark"] select.text-input {
     background-image: url("data:image/svg+xml;utf8,<svg fill='%239aa2ad' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  }
+
+  /* ---------- Card de licitação (versão modernizada) ---------- */
+
+  .bid-card {
+    border-radius: 14px;
+    padding: 18px 22px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  .bid-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px var(--shadow);
+    border-color: var(--accent);
+  }
+
+  .bid-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .bid-card__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 24px;
+    margin: 0 0 8px;
+  }
+
+  .bid-card__title .pregao {
+    font-family: 'Hanken Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .bid-card__title .uasg {
+    font-family: 'Hanken Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .bid-card__linha {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .bid-card__linha .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .bid-card__linha strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .bid-card__local {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+  }
+
+  .bid-card__local .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .bid-card__objeto {
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1.45;
+    margin: 10px 0 12px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    line-height: 1.6;
+  }
+
+  .chip .material-symbols-outlined {
+    font-size: 14px;
+  }
+
+  .chip--situacao {
+    background: var(--help-bg);
+    color: var(--help-text);
+  }
+
+  .chip--portal {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    text-transform: none;
+    font-weight: 600;
+    letter-spacing: normal;
+  }
+
+  .bid-card__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .bid-card__valores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .bid-card__valores strong {
+    color: var(--text);
+  }
+
+  .bid-card__botoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .bid-card__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent-solid);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .bid-card__btn .material-symbols-outlined {
+    font-size: 17px;
+  }
+
+  .bid-card__btn:hover {
+    background: var(--accent-solid-hover);
+  }
+
+  .bid-card__btn[aria-disabled="true"] {
+    background: var(--border);
+    color: var(--muted);
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .bid-card__btn--secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .bid-card__btn--secondary:hover {
+    background: var(--bg);
+  }
+
+  .bid-card__btn--secondary[aria-disabled="true"] {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+    opacity: 0.6;
   }
 </style>
 </head>
@@ -328,6 +522,17 @@
             </div>
 
             <div class="field">
+              <label for="esfera">Esfera</label>
+              <select id="esfera" class="text-input">
+                <option value="TODOS">Todas as Esferas</option>
+                <option value="F">Federal</option>
+                <option value="E">Estadual</option>
+                <option value="M">Municipal</option>
+                <option value="D">Distrital</option>
+              </select>
+            </div>
+
+            <div class="field">
               <label for="modalidade">Modalidade</label>
               <select id="modalidade" class="text-input">
                 <option value="TODOS">Todas as Modalidades</option>
@@ -439,7 +644,7 @@
     async function toggleFavorito(item, starEl) {
       const novoValor = !item.favorito;
       try {
-        const resp = await fetch(`/api/monitorados/${item.idCompra}/favorito`, {
+        const resp = await fetch(`/api/monitorados/${encodeURIComponent(item.idCompra)}/favorito`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ favorito: novoValor }),
@@ -464,26 +669,62 @@
       resultsEl.innerHTML = '';
       itens.forEach((item) => {
         const card = document.createElement('div');
-        card.className = 'result-card';
+        card.className = 'result-card bid-card';
+
+        const temLink = !!item.link;
+        const botaoAtributos = temLink
+          ? `href="${item.link}" target="_blank" rel="noopener noreferrer"`
+          : `href="#" aria-disabled="true" tabindex="-1"`;
+
+        const temArquivos = !!item.linkArquivos;
+        const botaoArquivosAtributos = temArquivos
+          ? `href="${item.linkArquivos}" target="_blank" rel="noopener noreferrer"`
+          : `href="#" aria-disabled="true" tabindex="-1"`;
+
+        const orgaoEUnidadeIguais = item.unidade && item.orgao &&
+          item.unidade.trim().toLowerCase() === item.orgao.trim().toLowerCase();
+        const unidadeEhSoNumero = item.unidade && /^\d+$/.test(item.unidade.trim());
+        const orgaoTexto = item.orgao || item.unidade || 'Órgão não informado';
+        const unidadeTexto = (orgaoEUnidadeIguais || unidadeEhSoNumero) ? '' : item.unidade;
+
         card.innerHTML = `
-          <div class="result-card-header">
-            <h3>UASG ${item.uasg} — Pregão ${item.numeroPregao}/${item.anoPregao}</h3>
+          <div class="bid-card__top">
+            <div class="bid-card__title">
+              <span class="pregao">Pregão ${item.numeroPregao}/${item.anoPregao}</span>
+              <span class="uasg">UASG ${item.uasg}</span>
+            </div>
             <span class="material-symbols-outlined fav-star ${item.favorito ? 'active' : ''}" title="${item.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">${item.favorito ? 'star' : 'star_rate'}</span>
           </div>
-          <div class="result-meta">
-            <span><strong>Órgão:</strong> ${item.orgao || '—'}</span>
-            <span><strong>Unidade:</strong> ${item.unidade || '—'}</span>
-            <span><strong>Município:</strong> ${item.municipio || '—'} - ${item.uf || '—'}</span>
+
+          <div class="bid-card__linha">
+            <span class="material-symbols-outlined" aria-hidden="true">account_balance</span>
+            <span><strong>${orgaoTexto}</strong>${unidadeTexto ? ' — ' + unidadeTexto : ''}</span>
+            ${item.esfera ? `<span class="bid-card__local">${item.esfera}</span>` : ''}
+            ${item.municipio ? `<span class="bid-card__local"><span class="material-symbols-outlined" aria-hidden="true">location_on</span>${item.municipio}${item.uf ? '/' + item.uf : ''}</span>` : ''}
           </div>
-          <div class="result-objeto">${item.objeto || 'Sem descrição do objeto.'}</div>
-          <div class="result-meta">
-            <span class="badge">${item.situacao || 'Situação não informada'}</span>
-            <span><strong>Valor Estimado:</strong> ${formatarMoeda(item.valorEstimado)}</span>
-            <span><strong>Abertura:</strong> ${formatarData(item.dataAbertura)}</span>
+
+          <p class="bid-card__objeto">${item.objeto || 'Sem descrição do objeto.'}</p>
+
+          <div class="chip-row">
+            <span class="chip chip--situacao">${item.situacao || 'Situação não informada'}</span>
+            ${item.portal ? `<span class="chip chip--portal"><span class="material-symbols-outlined" aria-hidden="true">storefront</span>${item.portal}</span>` : ''}
           </div>
-          <div class="result-url" style="margin-top:8px;">
-            Página no ComprasNet:
-            <a class="result-link" href="${item.link}" target="_blank" rel="noopener noreferrer">${item.link}</a>
+
+          <div class="bid-card__footer">
+            <div class="bid-card__valores">
+              <span><strong>Valor Estimado:</strong> ${formatarMoeda(item.valorEstimado)}</span>
+              <span><strong>Abertura:</strong> ${formatarData(item.dataAbertura)}</span>
+            </div>
+            <div class="bid-card__botoes">
+              <a class="bid-card__btn bid-card__btn--secondary" ${botaoArquivosAtributos} title="${temArquivos ? 'Baixar arquivos da licitação no PNCP' : 'Arquivos indisponíveis para esta licitação'}">
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                Baixar arquivos
+              </a>
+              <a class="bid-card__btn" ${botaoAtributos}>
+                <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+                ${temLink ? 'Portal da licitação' : 'Link indisponível'}
+              </a>
+            </div>
           </div>
         `;
 
@@ -581,6 +822,7 @@
       const pregao = document.getElementById('pregao').value.trim();
       const objeto = document.getElementById('objeto').value.trim();
       const situacao = document.getElementById('situacao').value;
+      const esfera = document.getElementById('esfera').value;
       const modalidade = document.getElementById('modalidade').value;
       const ordenacao = document.getElementById('ordenacao').value;
       const direcao = document.getElementById('direcao').value;
@@ -603,6 +845,7 @@
       if (pregao) params.set('pregao', pregao);
       if (objeto) params.set('objeto', objeto);
       if (situacao !== 'TODOS') params.set('situacao', situacao);
+      if (esfera !== 'TODOS') params.set('esfera', esfera);
       if (modalidade !== 'TODOS') params.set('modalidade', modalidade);
       if (favorito) params.set('favorito', 'true');
 
@@ -640,7 +883,17 @@
       paginaAtual = 1;
     });
 
-    // Pesquisa inicial
+    // Pesquisa inicial: mostra por padrão as licitações com abertura em uma janela
+    // próxima de hoje (alguns dias atrás até algumas semanas à frente), em vez de
+    // travar em "só hoje" (que pode não ter nenhuma) ou despejar todo o histórico.
+    const hoje = new Date();
+    const inicioJanela = new Date(hoje);
+    inicioJanela.setDate(inicioJanela.getDate() - 3);
+    const fimJanela = new Date(hoje);
+    fimJanela.setDate(fimJanela.getDate() + 15);
+
+    document.getElementById('dataAberturaInicio').value = inicioJanela.toISOString().slice(0, 10);
+    document.getElementById('dataAberturaFim').value = fimJanela.toISOString().slice(0, 10);
     pesquisar(true);
   </script>
 </body>
