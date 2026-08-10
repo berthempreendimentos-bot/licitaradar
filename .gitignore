@@ -41,3 +41,5 @@ gcm-diagnose.log
 
 # Watchdog local do bot_infinito.py
 .bot_watchdog_estado.json
+.vercel
+.env*

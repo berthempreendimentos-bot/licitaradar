@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PEPACORP LICITA — Produção</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .main-content {
+    padding: 22px 28px;
+  }
+
+  .page.full {
+    max-width: none;
+    height: calc(100vh - 44px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .producao-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    flex: none;
+  }
+
+  .producao-header h1 {
+    margin: 0 0 4px;
+    font-size: 20px;
+  }
+
+  .producao-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 640px;
+  }
+
+  .producao-busca {
+    flex: none;
+    width: 280px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+  }
+
+  .producao-busca .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--muted);
+    flex: none;
+  }
+
+  .producao-busca input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    outline: none;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  .producao-busca input::placeholder {
+    color: var(--muted);
+  }
+
+  .kanban-board {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .kanban-coluna {
+    flex: 1 1 0;
+    min-width: 190px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .kanban-coluna.arrastando-sobre {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .kanban-coluna__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex: none;
+  }
+
+  .kanban-coluna__header .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--accent);
+  }
+
+  .kanban-coluna__titulo {
+    font-family: 'Hanken Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 13.5px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .kanban-coluna__contagem {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 999px;
+    padding: 2px 8px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .kanban-coluna__lista {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .kanban-coluna__vazio {
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: center;
+    padding: 18px 8px;
+  }
+
+  .kanban-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: grab;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .kanban-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+
+  .kanban-card.arrastando {
+    opacity: 0.45;
+  }
+
+  .kanban-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .kanban-card__titulo {
+    font-family: 'Hanken Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 11.5px;
+    line-height: 1.3;
+    flex: none;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fase-cor, var(--accent)) 16%, transparent);
+    color: var(--fase-cor, var(--accent));
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .kanban-card__acoes {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+  }
+
+  .kanban-card__acoes .material-symbols-outlined {
+    font-size: 15px;
+  }
+
+  .kanban-card__remover,
+  .kanban-card__link {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .kanban-card__remover {
+    border: none;
+    background: none;
+    color: var(--muted);
+    padding: 0;
+  }
+
+  .kanban-card__remover:hover {
+    color: var(--danger);
+    background: var(--bg);
+  }
+
+  .kanban-card__linha {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kanban-card__linha:last-of-type {
+    margin-bottom: 10px;
+  }
+
+  .kanban-card__linha .material-symbols-outlined {
+    font-size: 14px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .kanban-card__linha strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .kanban-card__link {
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .kanban-card__link:hover {
+    background: var(--card-bg);
+    border-color: var(--accent);
+  }
+
+  .kanban-card__link[aria-disabled="true"] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .kanban-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  .kanban-empty .material-symbols-outlined {
+    font-size: 40px;
+    color: var(--border);
+    margin-bottom: 10px;
+  }
+
+  .kanban-empty a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .kanban-empty a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-name">PEPACORP LICITA</div>
+        <div class="brand-tagline">Monitoramento de Licitações</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+        <a href="licitacao.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">gavel</span><span>Licitação</span></a>
+        <a href="producao.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">view_kanban</span><span>Produção</span></a>
+        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
+        <a href="painel-local.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">terminal</span><span>Painel Local</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="sidebarToggle" type="button">
+          <span class="material-symbols-outlined" id="sidebarToggleIcon" aria-hidden="true">chevron_left</span>
+          <span id="sidebarToggleLabel">Recolher menu</span>
+        </button>
+        <button class="sidebar-btn" id="themeToggle" type="button">
+          <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
+          <span id="themeLabel">Modo escuro</span>
+        </button>
+        <button class="sidebar-btn" id="logoutBtn" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page full">
+        <div class="producao-header">
+          <div>
+            <h1>Produção</h1>
+            <p>Acompanhe aqui as licitações que vamos disputar, fase a fase. Marcar uma licitação com ★ em Licitação já coloca ela automaticamente em Participação.</p>
+          </div>
+          <div class="producao-busca">
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input type="text" id="buscaQuadro" placeholder="Buscar por UASG, órgão, cidade ou objeto..." autocomplete="off">
+          </div>
+        </div>
+
+        <div class="status-msg" id="statusMsg" role="status" aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>Carregando quadro de produção...
+        </div>
+        <div class="kanban-board" id="kanbanBoard" hidden></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="notificacoes.js"></script>
+  <script>
+    const _fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await _fetch(...args);
+      if (resp.status === 401) window.location.href = 'login.html';
+      return resp;
+    };
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = 'login.html';
+    });
+
+    const root = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+      root.setAttribute('data-theme', theme);
+      themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      themeLabel.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      localStorage.setItem('radar-theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('radar-theme');
+    applyTheme(savedTheme || 'light');
+
+    themeToggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    const sidebarEl = document.querySelector('.sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
+    const sidebarToggleLabel = document.getElementById('sidebarToggleLabel');
+
+    function applySidebarCollapsed(collapsed) {
+      sidebarEl.classList.toggle('collapsed', collapsed);
+      sidebarToggleIcon.textContent = collapsed ? 'chevron_right' : 'chevron_left';
+      sidebarToggleLabel.textContent = collapsed ? 'Expandir menu' : 'Recolher menu';
+      localStorage.setItem('radar-sidebar-collapsed', collapsed ? 'true' : 'false');
+    }
+
+    applySidebarCollapsed(localStorage.getItem('radar-sidebar-collapsed') === 'true');
+
+    sidebarToggle.addEventListener('click', () => {
+      applySidebarCollapsed(!sidebarEl.classList.contains('collapsed'));
+    });
+
+    // Cada fase tem uma cor própria — o badge da UASG no card usa a cor da fase
+    // atual e muda sozinho quando o card é arrastado pra outra coluna.
+    const FASES = [
+      { id: 'participacao', label: 'Participação', icon: 'how_to_reg', cor: '#2563eb' },
+      { id: 'proposta', label: 'Proposta', icon: 'description', cor: '#7c3aed' },
+      { id: 'habilitacao', label: 'Habilitação', icon: 'verified', cor: '#d97706' },
+      { id: 'diligencia', label: 'Diligência', icon: 'search', cor: '#dc2626' },
+      { id: 'homologacao', label: 'Homologação', icon: 'task_alt', cor: '#16a34a' },
+    ];
+
+    const statusMsg = document.getElementById('statusMsg');
+    const kanbanBoard = document.getElementById('kanbanBoard');
+
+    function formatarMoeda(valor) {
+      if (valor === null || valor === undefined) return '—';
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatarData(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    async function moverFase(idCompra, fase) {
+      const resp = await fetch(`/api/producao/${encodeURIComponent(idCompra)}/fase`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fase }),
+      });
+      if (!resp.ok) {
+        const dados = await resp.json().catch(() => ({}));
+        throw new Error(dados.erro || 'Não foi possível mover a licitação.');
+      }
+    }
+
+    async function removerDoQuadro(idCompra) {
+      if (!confirm('Remover esta licitação do quadro de Produção? Isso também tira o favorito.')) return;
+      try {
+        const resp = await fetch(`/api/monitorados/${encodeURIComponent(idCompra)}/favorito`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ favorito: false }),
+        });
+        if (!resp.ok) throw new Error('Não foi possível remover.');
+        carregarQuadro();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function criarCard(item) {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.dataset.idCompra = item.idCompra;
+
+      const temLink = !!item.link;
+      const orgaoTexto = item.orgao || item.unidade || 'Órgão não informado';
+      const cidadeTexto = item.municipio ? `${item.municipio}${item.uf ? '/' + item.uf : ''}` : '';
+      const faseInfo = FASES.find((f) => f.id === item.fase);
+      const faseCor = faseInfo ? faseInfo.cor : null;
+
+      card.innerHTML = `
+        <div class="kanban-card__top">
+          <div class="kanban-card__titulo" style="${faseCor ? `--fase-cor: ${faseCor}` : ''}">UASG ${item.uasg}</div>
+          <div class="kanban-card__acoes">
+            <a class="kanban-card__link" href="${temLink ? item.link : '#'}" target="_blank" rel="noopener noreferrer" title="${temLink ? 'Abrir licitação' : 'Link indisponível'}" ${temLink ? '' : 'aria-disabled="true"'}>
+              <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+            </a>
+            <button type="button" class="kanban-card__remover" title="Remover do quadro (tira o favorito)">
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+          </div>
+        </div>
+        <div class="kanban-card__linha" title="${orgaoTexto}">
+          <span class="material-symbols-outlined" aria-hidden="true">account_balance</span>
+          <span>${orgaoTexto}</span>
+        </div>
+        ${cidadeTexto ? `
+        <div class="kanban-card__linha">
+          <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
+          <span>${cidadeTexto}</span>
+        </div>` : ''}
+        <div class="kanban-card__linha">
+          <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+          <span><strong>Valor:</strong> ${formatarMoeda(item.valorEstimado)}</span>
+        </div>
+        <div class="kanban-card__linha">
+          <span class="material-symbols-outlined" aria-hidden="true">event</span>
+          <span><strong>Abertura:</strong> ${formatarData(item.dataAbertura)}</span>
+        </div>
+      `;
+
+      card.querySelector('.kanban-card__remover').addEventListener('click', () => removerDoQuadro(item.idCompra));
+
+      card.addEventListener('dragstart', () => {
+        card.classList.add('arrastando');
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('arrastando');
+      });
+
+      return card;
+    }
+
+    let itensAtuais = [];
+    let termoBusca = '';
+
+    const buscaQuadroInput = document.getElementById('buscaQuadro');
+    buscaQuadroInput.addEventListener('input', () => {
+      termoBusca = buscaQuadroInput.value.trim().toLowerCase();
+      renderQuadro();
+    });
+
+    // Busca só filtra o que já está carregado no navegador (o quadro inteiro já
+    // vem de uma vez em /api/producao) — não precisa ir de novo no servidor.
+    function itemCombinaComBusca(item) {
+      if (!termoBusca) return true;
+      const campos = [item.uasg, item.orgao, item.unidade, item.municipio, item.uf, item.objeto];
+      return campos.some((campo) => campo && String(campo).toLowerCase().includes(termoBusca));
+    }
+
+    function renderQuadro() {
+      kanbanBoard.innerHTML = '';
+
+      FASES.forEach((fase) => {
+        const itensFase = itensAtuais.filter((item) => item.fase === fase.id && itemCombinaComBusca(item));
+
+        const coluna = document.createElement('div');
+        coluna.className = 'kanban-coluna';
+        coluna.dataset.fase = fase.id;
+
+        const header = document.createElement('div');
+        header.className = 'kanban-coluna__header';
+        header.innerHTML = `
+          <span class="material-symbols-outlined" aria-hidden="true">${fase.icon}</span>
+          <span class="kanban-coluna__titulo">${fase.label}</span>
+          <span class="kanban-coluna__contagem">${itensFase.length}</span>
+        `;
+        coluna.appendChild(header);
+
+        const lista = document.createElement('div');
+        lista.className = 'kanban-coluna__lista';
+
+        if (itensFase.length === 0) {
+          lista.innerHTML = termoBusca
+            ? '<p class="kanban-coluna__vazio">Nenhum resultado pra essa busca nesta fase.</p>'
+            : '<p class="kanban-coluna__vazio">Nenhuma licitação nesta fase.</p>';
+        } else {
+          itensFase.forEach((item) => lista.appendChild(criarCard(item)));
+        }
+
+        lista.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          coluna.classList.add('arrastando-sobre');
+        });
+        lista.addEventListener('dragleave', () => {
+          coluna.classList.remove('arrastando-sobre');
+        });
+        lista.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          coluna.classList.remove('arrastando-sobre');
+          const cardArrastando = kanbanBoard.querySelector('.kanban-card.arrastando');
+          if (!cardArrastando) return;
+          const idCompra = cardArrastando.dataset.idCompra;
+          const item = itensAtuais.find((i) => i.idCompra === idCompra);
+          if (!item || item.fase === fase.id) return;
+          try {
+            await moverFase(idCompra, fase.id);
+            item.fase = fase.id;
+            renderQuadro();
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+
+        coluna.appendChild(lista);
+        kanbanBoard.appendChild(coluna);
+      });
+    }
+
+    async function carregarQuadro() {
+      try {
+        const resp = await fetch('/api/producao');
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar o quadro de produção.');
+
+        itensAtuais = dados.itens || [];
+
+        if (itensAtuais.length === 0) {
+          statusMsg.classList.remove('error');
+          statusMsg.innerHTML = `
+            <div class="kanban-empty">
+              <span class="material-symbols-outlined" aria-hidden="true">view_kanban</span><br>
+              Nenhuma licitação em Produção ainda.<br>
+              Marque uma licitação com ★ em <a href="licitacao.html">Licitação</a> pra começar a acompanhar aqui.
+            </div>
+          `;
+          statusMsg.hidden = false;
+          kanbanBoard.hidden = true;
+          return;
+        }
+
+        statusMsg.hidden = true;
+        kanbanBoard.hidden = false;
+        renderQuadro();
+      } catch (err) {
+        statusMsg.classList.add('error');
+        statusMsg.textContent = err.message;
+        statusMsg.hidden = false;
+        kanbanBoard.hidden = true;
+      }
+    }
+
+    carregarQuadro();
+  </script>
+</body>
+</html>

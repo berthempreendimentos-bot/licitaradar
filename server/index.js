@@ -12,6 +12,12 @@ const ROTAS_PUBLICAS = new Set(['/login.html', '/api/login', '/style.css', '/lic
 
 const ESFERA_LABELS = { F: 'Federal', E: 'Estadual', M: 'Municipal', D: 'Distrital' };
 
+// Fases do quadro de Produção (kanban), na ordem em que aparecem no board.
+// Favoritar uma licitação (ver PATCH /api/monitorados/:idCompra/favorito) entra
+// automaticamente na primeira fase.
+const FASES_PRODUCAO = ['participacao', 'proposta', 'habilitacao', 'diligencia', 'homologacao'];
+const FASE_PRODUCAO_INICIAL = FASES_PRODUCAO[0];
+
 function mapEsfera(esferaId) {
   return ESFERA_LABELS[esferaId] || null;
 }
@@ -726,6 +732,8 @@ app.patch('/api/monitorados/:idCompra/favorito', async (req, res) => {
         .insert({
           id_compra: cachedItem.id_compra,
           uasg: cachedItem.uasg,
+          orgao: cachedItem.orgao,
+          unidade: cachedItem.unidade,
           numero_pregao: cachedItem.numero_pregao,
           ano_pregao: cachedItem.ano_pregao,
           municipio: cachedItem.municipio,
@@ -737,17 +745,81 @@ app.patch('/api/monitorados/:idCompra/favorito', async (req, res) => {
           modalidade: cachedItem.modalidade,
           link: cachedItem.link,
           favorito: favorito,
-          monitorado: true,
+          fase_producao: favorito ? FASE_PRODUCAO_INICIAL : null,
           atualizado_em: new Date().toISOString()
         });
 
       if (insertError) throw insertError;
+    } else if (favorito && !updated[0].fase_producao) {
+      // Já existia no monitoramento mas nunca entrou (ou saiu) do quadro de Produção:
+      // favoritar de novo já entra automaticamente na primeira fase (Participação).
+      const { error: faseError } = await supabase
+        .from('pregoes_monitorados')
+        .update({ fase_producao: FASE_PRODUCAO_INICIAL })
+        .eq('id_compra', idCompra);
+
+      if (faseError) throw faseError;
     }
 
     res.json({ ok: true, favorito });
   } catch (erro) {
     console.error('Erro ao atualizar favorito no Supabase:', erro.message);
     res.status(502).json({ erro: 'Não foi possível atualizar o favorito agora.' });
+  }
+});
+
+// Quadro de Produção (kanban): licitações favoritadas que entraram no processo de
+// participação, agrupadas pela fase atual (ver FASES_PRODUCAO).
+app.get('/api/producao', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('pregoes_monitorados')
+      .select('*')
+      .eq('favorito', true)
+      .not('fase_producao', 'is', null)
+      .order('atualizado_em', { ascending: false });
+
+    if (error) throw error;
+
+    const itens = (data || []).map((row) => ({
+      ...mapearLicitacao(row),
+      fase: row.fase_producao,
+    }));
+
+    res.json({ itens });
+  } catch (erro) {
+    console.error('Erro ao buscar quadro de produção no Supabase:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível carregar o quadro de produção agora.' });
+  }
+});
+
+app.patch('/api/producao/:idCompra/fase', async (req, res) => {
+  const { idCompra } = req.params;
+  const fase = String((req.body || {}).fase || '').trim();
+
+  if (!FASES_PRODUCAO.includes(fase)) {
+    return res.status(400).json({ erro: 'Fase inválida.' });
+  }
+
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('pregoes_monitorados')
+      .update({ fase_producao: fase, atualizado_em: new Date().toISOString() })
+      .eq('id_compra', idCompra)
+      .eq('favorito', true)
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      return res.status(404).json({ erro: 'Licitação não encontrada no quadro de produção.' });
+    }
+
+    res.json({ ok: true, fase });
+  } catch (erro) {
+    console.error('Erro ao atualizar fase de produção no Supabase:', erro.message);
+    res.status(502).json({ erro: 'Não foi possível atualizar a fase agora.' });
   }
 });
 

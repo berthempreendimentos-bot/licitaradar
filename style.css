@@ -84,6 +84,30 @@ h1, h2, h3, h4, .brand-name {
   position: sticky;
   top: 0;
   height: 100vh;
+  transition: width 0.15s ease;
+}
+
+.sidebar.collapsed {
+  width: 72px;
+}
+
+.sidebar.collapsed .sidebar-brand .brand-name,
+.sidebar.collapsed .sidebar-brand .brand-tagline,
+.sidebar.collapsed .sidebar-link span:last-child,
+.sidebar.collapsed .sidebar-btn span:last-child {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-brand {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.sidebar.collapsed .sidebar-link,
+.sidebar.collapsed .sidebar-btn {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .sidebar-brand {

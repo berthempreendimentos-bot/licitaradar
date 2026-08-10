@@ -105,11 +105,16 @@
         <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
         <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
         <a href="licitacao.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">gavel</span><span>Licitação</span></a>
+        <a href="producao.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">view_kanban</span><span>Produção</span></a>
         <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
         <a href="whatsapp.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
         <a href="painel-local.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">terminal</span><span>Painel Local</span></a>
       </nav>
       <div class="sidebar-footer">
+        <button class="sidebar-btn" id="sidebarToggle" type="button">
+          <span class="material-symbols-outlined" id="sidebarToggleIcon" aria-hidden="true">chevron_left</span>
+          <span id="sidebarToggleLabel">Recolher menu</span>
+        </button>
         <button class="sidebar-btn" id="themeToggle" type="button">
           <span class="material-symbols-outlined" id="themeIcon" aria-hidden="true">dark_mode</span>
           <span id="themeLabel">Modo escuro</span>
@@ -191,6 +196,24 @@
     toggle.addEventListener('click', () => {
       const current = root.getAttribute('data-theme');
       applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    const sidebarEl = document.querySelector('.sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
+    const sidebarToggleLabel = document.getElementById('sidebarToggleLabel');
+
+    function applySidebarCollapsed(collapsed) {
+      sidebarEl.classList.toggle('collapsed', collapsed);
+      sidebarToggleIcon.textContent = collapsed ? 'chevron_right' : 'chevron_left';
+      sidebarToggleLabel.textContent = collapsed ? 'Expandir menu' : 'Recolher menu';
+      localStorage.setItem('radar-sidebar-collapsed', collapsed ? 'true' : 'false');
+    }
+
+    applySidebarCollapsed(localStorage.getItem('radar-sidebar-collapsed') === 'true');
+
+    sidebarToggle.addEventListener('click', () => {
+      applySidebarCollapsed(!sidebarEl.classList.contains('collapsed'));
     });
 
     // ---------- Webhook ----------
