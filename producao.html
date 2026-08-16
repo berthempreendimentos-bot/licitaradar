@@ -77,8 +77,7 @@
 
   .kanban-board {
     display: flex;
-    gap: 12px;
-    overflow-x: auto;
+    gap: 10px;
     align-items: stretch;
     flex: 1;
     min-height: 0;
@@ -86,7 +85,7 @@
 
   .kanban-coluna {
     flex: 1 1 0;
-    min-width: 190px;
+    min-width: 0;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -103,8 +102,8 @@
   .kanban-coluna__header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 14px 16px;
+    gap: 6px;
+    padding: 12px;
     border-bottom: 1px solid var(--border);
     flex: none;
   }
@@ -112,14 +111,19 @@
   .kanban-coluna__header .material-symbols-outlined {
     font-size: 18px;
     color: var(--accent);
+    flex: none;
   }
 
   .kanban-coluna__titulo {
     font-family: 'Hanken Grotesk', sans-serif;
     font-weight: 800;
-    font-size: 13.5px;
+    font-size: 13px;
     color: var(--text);
     flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .kanban-coluna__contagem {
@@ -131,6 +135,7 @@
     padding: 2px 8px;
     min-width: 20px;
     text-align: center;
+    flex: none;
   }
 
   .kanban-coluna__lista {
@@ -302,11 +307,28 @@
         <div class="brand-tagline">Monitoramento de Licitações</div>
       </div>
       <nav class="sidebar-nav">
-        <a href="index.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
-        <a href="monitoramento.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
-        <a href="licitacao.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">gavel</span><span>Licitação</span></a>
-        <a href="producao.html" class="sidebar-link active"><span class="material-symbols-outlined" aria-hidden="true">view_kanban</span><span>Produção</span></a>
-        <a href="alertas.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+        <div class="sidebar-group" data-group="licitacao">
+          <div class="sidebar-group-header">
+            <a href="licitacao.html" class="sidebar-link sidebar-link--grupo"><span class="material-symbols-outlined" aria-hidden="true">gavel</span><span>Licitação</span></a>
+            <button type="button" class="sidebar-caret" aria-label="Recolher/expandir Licitação" aria-expanded="true"><span class="material-symbols-outlined" aria-hidden="true">expand_more</span></button>
+          </div>
+          <div class="sidebar-submenu">
+            <a href="producao.html" class="sidebar-link sidebar-sublink active"><span class="material-symbols-outlined" aria-hidden="true">view_kanban</span><span>Produção</span></a>
+            <a href="edital.html" class="sidebar-link sidebar-sublink"><span class="material-symbols-outlined" aria-hidden="true">description</span><span>Edital</span></a>
+          </div>
+        </div>
+
+        <div class="sidebar-group" data-group="monitoramento">
+          <div class="sidebar-group-header">
+            <a href="monitoramento.html" class="sidebar-link sidebar-link--grupo"><span class="material-symbols-outlined" aria-hidden="true">dashboard</span><span>Monitoramento</span></a>
+            <button type="button" class="sidebar-caret" aria-label="Recolher/expandir Monitoramento" aria-expanded="true"><span class="material-symbols-outlined" aria-hidden="true">expand_more</span></button>
+          </div>
+          <div class="sidebar-submenu">
+            <a href="index.html" class="sidebar-link sidebar-sublink"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>Buscar</span></a>
+            <a href="alertas.html" class="sidebar-link sidebar-sublink"><span class="material-symbols-outlined" aria-hidden="true">notifications</span><span>Alertas</span></a>
+          </div>
+        </div>
+
         <a href="whatsapp.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">chat</span><span>WhatsApp</span></a>
         <a href="painel-local.html" class="sidebar-link"><span class="material-symbols-outlined" aria-hidden="true">terminal</span><span>Painel Local</span></a>
       </nav>
@@ -397,6 +419,27 @@
 
     sidebarToggle.addEventListener('click', () => {
       applySidebarCollapsed(!sidebarEl.classList.contains('collapsed'));
+    });
+
+    // Cada grupo do menu (Licitação, Monitoramento) pode ser recolhido individualmente,
+    // preferência salva por navegador. O grupo com a página atual começa sempre aberto,
+    // mesmo que o usuário tenha recolhido ele antes (senão a página ativa some da vista).
+    document.querySelectorAll('.sidebar-group').forEach((grupo) => {
+      const grupoId = grupo.dataset.group;
+      const caret = grupo.querySelector('.sidebar-caret');
+      const temLinkAtivo = !!grupo.querySelector('.sidebar-link.active');
+      const preferenciaRecolhido = localStorage.getItem(`radar-menu-grupo-${grupoId}`) === 'recolhido';
+      const recolhido = !temLinkAtivo && preferenciaRecolhido;
+
+      grupo.classList.toggle('recolhido', recolhido);
+      caret.setAttribute('aria-expanded', String(!recolhido));
+
+      caret.addEventListener('click', () => {
+        const novoRecolhido = !grupo.classList.contains('recolhido');
+        grupo.classList.toggle('recolhido', novoRecolhido);
+        caret.setAttribute('aria-expanded', String(!novoRecolhido));
+        localStorage.setItem(`radar-menu-grupo-${grupoId}`, novoRecolhido ? 'recolhido' : 'aberto');
+      });
     });
 
     // Cada fase tem uma cor própria — o badge da UASG no card usa a cor da fase

@@ -22,6 +22,15 @@ function mapEsfera(esferaId) {
   return ESFERA_LABELS[esferaId] || null;
 }
 
+// Remove acentos/cedilha pra busca de cidade não depender de digitar "Brasília"
+// certinho — "brasilia", "Brasilia" ou "BRASÍLIA" devem bater igual.
+function removerAcentos(texto) {
+  return String(texto || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+}
+
 function derivarPortal(link) {
   if (!link) return null;
   let host;
@@ -542,9 +551,9 @@ app.get('/api/licitacoes/busca', async (req, res) => {
       .select('*', { count: 'exact' });
 
     // Aplicar filtros dinâmicos
-    if (cidade && cidade.trim()) {
-      query = query.ilike('municipio', `%${cidade.trim()}%`);
-    }
+    // Cidade não filtra aqui: "ilike" do Postgres não ignora acento/cedilha
+    // ("Brasilia" não bateria com "Brasília"), então é filtrada em JS mais abaixo,
+    // depois de normalizar os dois lados com removerAcentos().
     if (uf && uf.trim() && uf !== 'TODOS') {
       query = query.eq('uf', uf.trim());
     }
@@ -567,7 +576,18 @@ app.get('/api/licitacoes/busca', async (req, res) => {
       query = query.ilike('numero_pregao', `%${pregao.trim()}%`);
     }
     if (objeto && objeto.trim()) {
-      query = query.ilike('objeto', `%${objeto.trim()}%`);
+      // Aceita mais de um termo separado por vírgula ou ponto e vírgula (ver campo
+      // "Palavra no Objeto" em licitacao.html): basta bater com qualquer um deles.
+      const termosObjeto = objeto
+        .split(/[;,]/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      if (termosObjeto.length > 1) {
+        query = query.or(termosObjeto.map((t) => `objeto.ilike.%${t}%`).join(','));
+      } else if (termosObjeto.length === 1) {
+        query = query.ilike('objeto', `%${termosObjeto[0]}%`);
+      }
     }
     if (situacao && situacao.trim() && situacao !== 'TODOS') {
       query = query.ilike('situacao', `%${situacao.trim()}%`);
@@ -598,17 +618,36 @@ app.get('/api/licitacoes/busca', async (req, res) => {
 
     query = query.order(campoFinal, { ascending: direcaoAsc });
 
-    // Paginação
     const numPagina = Math.max(1, parseInt(pagina, 10) || 1);
     const numLimite = Math.max(1, parseInt(limite, 10) || 10);
-    const doItem = (numPagina - 1) * numLimite;
-    const ateItem = doItem + numLimite - 1;
 
-    query = query.range(doItem, ateItem);
+    let data;
+    let count;
 
-    const { data, error, count } = await query;
+    const cidadeFiltro = cidade && cidade.trim() ? removerAcentos(cidade.trim()) : null;
 
-    if (error) throw error;
+    if (cidadeFiltro) {
+      // Município não dá pra filtrar no Postgres aqui (precisa ignorar acento), então
+      // busca um lote maior já ordenado, filtra em JS e pagina manualmente. Um teto de
+      // 5000 linhas evita carregar a base toda de uma vez num filtro muito genérico.
+      const { data: candidatos, error: erroCandidatos } = await query.limit(5000);
+      if (erroCandidatos) throw erroCandidatos;
+
+      const filtrados = (candidatos || []).filter((row) =>
+        removerAcentos(row.municipio).includes(cidadeFiltro)
+      );
+
+      count = filtrados.length;
+      const doItem = (numPagina - 1) * numLimite;
+      data = filtrados.slice(doItem, doItem + numLimite);
+    } else {
+      const doItem = (numPagina - 1) * numLimite;
+      const ateItem = doItem + numLimite - 1;
+      const resultado = await query.range(doItem, ateItem);
+      if (resultado.error) throw resultado.error;
+      data = resultado.data;
+      count = resultado.count;
+    }
 
     const itens = (data || []).map((row) => ({
       ...mapearLicitacao(row),

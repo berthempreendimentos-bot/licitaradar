@@ -163,6 +163,89 @@ h1, h2, h3, h4, .brand-name {
   font-weight: 700;
 }
 
+.sidebar-group {
+  margin-top: 10px;
+}
+
+.sidebar-group:first-child {
+  margin-top: 0;
+}
+
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-group-header .sidebar-link--grupo {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-caret {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.sidebar-caret:hover {
+  background: var(--bg);
+}
+
+.sidebar-caret .material-symbols-outlined {
+  font-size: 18px;
+  transition: transform 0.15s ease;
+}
+
+.sidebar-group.recolhido .sidebar-caret .material-symbols-outlined {
+  transform: rotate(-90deg);
+}
+
+.sidebar-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  max-height: 120px;
+  margin-top: 4px;
+  transition: max-height 0.2s ease, margin-top 0.2s ease;
+}
+
+.sidebar-group.recolhido .sidebar-submenu {
+  max-height: 0;
+  margin-top: 0;
+}
+
+.sidebar-sublink {
+  padding-left: 34px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.sidebar-sublink .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.sidebar.collapsed .sidebar-caret {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-submenu {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-group {
+  margin-top: 4px;
+}
+
 .sidebar-footer {
   padding: 12px;
   border-top: 1px solid var(--border);
@@ -224,6 +307,12 @@ h1, h2, h3, h4, .brand-name {
   .sidebar-link { border-right: none; border-bottom: 3px solid transparent; }
   .sidebar-link.active { border-right-color: transparent; border-bottom-color: var(--accent-solid); }
   .sidebar-link span:last-child { display: none; }
+  /* Sem espaço pra hierarquia de menu recolhível numa barra de ícones: achata tudo
+     numa fileira só, sempre expandida, sem o botão de recolher grupo. */
+  .sidebar-group { display: flex; align-items: center; margin-top: 0; }
+  .sidebar-caret { display: none; }
+  .sidebar-submenu { display: flex; flex-direction: row; max-height: none; margin-top: 0; }
+  .sidebar-sublink { padding-left: 12px; }
   .sidebar-footer { flex-direction: row; border-top: none; padding: 4px 12px; }
   .main-content { padding: 24px 16px; }
 }
