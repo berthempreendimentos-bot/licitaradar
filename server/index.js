@@ -963,14 +963,24 @@ app.post('/api/mensagens/:idCompra', async (req, res) => {
     const chave = (m) => `${m.remetente}||${m.mensagem}||${m.data_hora_texto || m.dataHoraTexto}`;
     const jaExistiaSet = new Set((existentes || []).map(chave));
 
-    const linhas = mensagens.map((m) => ({
-      id_compra: idCompra,
-      remetente: m.remetente,
-      grupo: m.grupo,
-      mensagem: m.mensagem,
-      data_hora_texto: m.dataHoraTexto,
-      data_hora: m.dataHora,
+    const linhasComChave = mensagens.map((m) => ({
+      chaveConflito: `${idCompra}||${m.remetente}||${m.mensagem}||${m.dataHoraTexto}`,
+      linha: {
+        id_compra: idCompra,
+        remetente: m.remetente,
+        grupo: m.grupo,
+        mensagem: m.mensagem,
+        data_hora_texto: m.dataHoraTexto,
+        data_hora: m.dataHora,
+      },
     }));
+
+    // O upsert usa (id_compra, remetente, mensagem, data_hora_texto) como chave de conflito
+    // (mesma unique constraint da tabela). Se o texto colado tiver duas mensagens com essa
+    // mesma chave (ex.: avisos automáticos repetidos sem horário distinguível), o Postgres
+    // rejeita o lote inteiro com "ON CONFLICT DO UPDATE command cannot affect row a second
+    // time" - por isso deduplicamos aqui antes de enviar.
+    const linhas = [...new Map(linhasComChave.map(({ chaveConflito, linha }) => [chaveConflito, linha])).values()];
 
     const { data: salvas, error } = await supabase
       .from('mensagens_chat')

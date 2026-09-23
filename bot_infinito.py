@@ -203,7 +203,7 @@ def worker_loop():
         atualizar_estado(status=f"Iniciando varredura #{varredura}...", varredura_num=varredura)
         print(f"\n[loop] Iniciando nova varredura ({datetime.datetime.now().strftime('%H:%M:%S')})...")
 
-        comando = [sys.executable, "-u", "monitor_mensagens.py", "--no-wait"]
+        comando = [sys.executable, "-u", "monitor_mensagens.py", "--no-wait", "--sem-janela"]
         if resume_id:
             comando += ["--resume-id", resume_id]
 

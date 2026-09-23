@@ -26,6 +26,11 @@ api_urls_utf8.txt
 buttons.txt
 parsed_buttons.txt
 posicao_botao.json
+
+# Executavel empacotado (PyInstaller) e artefatos de build - binario grande, gerado localmente
+*.exe
+dist/
+build_tmp/
 mensagens_extraidas_*.txt
 tela_mensagens_*.png
 erro-headless.png
