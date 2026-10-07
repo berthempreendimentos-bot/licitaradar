@@ -244,6 +244,8 @@ h1, h2, h3, h4, .brand-name {
 
 .sidebar.collapsed .sidebar-group {
   margin-top: 4px;
+}
+
 .sidebar-section-label {
   margin: 16px 12px 4px;
   padding-top: 14px;
