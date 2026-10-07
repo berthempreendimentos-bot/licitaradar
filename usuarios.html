@@ -3,17 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PEPACORP LICITA — Edital</title>
+<title>PEPACORP LICITA — Usuários</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Hanken+Grotesk:wght@700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-  .page.wide {
-    max-width: 900px;
+  .page { display: flex; flex-direction: column; gap: 24px; }
+
+  .card h2 {
+    margin: 0 0 18px;
+    font-size: 18px;
+    font-weight: 700;
   }
 
-  .btn-primary {
+  .form-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 220px;
+  }
+
+  .field label {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--label);
+  }
+
+  .primary-btn {
+    flex: none;
     height: 42px;
     display: inline-flex;
     align-items: center;
@@ -29,104 +54,40 @@
     transition: background 0.15s ease;
   }
 
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-solid-hover);
-  }
+  .primary-btn:hover:not(:disabled) { background: var(--accent-solid-hover); }
+  .primary-btn:disabled { opacity: 0.65; cursor: default; }
+  .primary-btn .material-symbols-outlined { font-size: 18px; }
 
-  .estudo-form {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
+  .status-msg.success { color: var(--accent); }
 
-  .estudo-form .field label {
-    display: block;
-    font-weight: 600;
+  .user-table {
+    width: 100%;
+    border-collapse: collapse;
     font-size: 14px;
-    color: var(--label);
-    margin-bottom: 8px;
   }
 
-  .estudo-form-actions {
-    display: flex;
-    justify-content: flex-end;
+  .user-table th,
+  .user-table td {
+    text-align: left;
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .estudos-lista {
-    margin-top: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .estudo-card {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    background: var(--card-bg);
-    box-shadow: 0 2px 8px var(--shadow);
-  }
-
-  .estudo-card__top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-
-  .estudo-card__referencia {
-    font-family: 'Hanken Grotesk', sans-serif;
-    font-weight: 800;
-    font-size: 15px;
-    color: var(--text);
-  }
-
-  .estudo-card__data {
+  .user-table th {
     font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--muted);
-    white-space: nowrap;
   }
 
-  .estudo-card__anotacoes {
-    font-size: 14px;
-    color: var(--text);
-    line-height: 1.5;
-    white-space: pre-wrap;
-    margin: 0 0 12px;
-  }
+  .user-table tr:last-child td { border-bottom: none; }
+  .user-table td.email { word-break: break-all; }
 
-  .estudo-card__acoes {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .estudo-card__acoes button {
-    height: 30px;
-    padding: 0 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--card-bg);
-    color: var(--text);
-    font-size: 12.5px;
-    cursor: pointer;
-  }
-
-  .estudo-card__acoes button:hover {
-    background: var(--bg);
-  }
-
-  .estudo-card__acoes .excluir:hover {
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-
-  .empty-msg {
-    color: var(--muted);
-    font-size: 14px;
-    text-align: center;
-    padding: 24px 0;
+  @media (max-width: 560px) {
+    .form-row { flex-direction: column; align-items: stretch; }
+    .field { flex: none; }
+    .primary-btn { width: 100%; justify-content: center; }
+    .user-table th:nth-child(3), .user-table td:nth-child(3) { display: none; }
   }
 </style>
 </head>
@@ -145,7 +106,7 @@
           </div>
           <div class="sidebar-submenu">
             <a href="producao.html" class="sidebar-link sidebar-sublink"><span class="material-symbols-outlined" aria-hidden="true">view_kanban</span><span>Produção</span></a>
-            <a href="edital.html" class="sidebar-link sidebar-sublink active"><span class="material-symbols-outlined" aria-hidden="true">description</span><span>Edital</span></a>
+            <a href="edital.html" class="sidebar-link sidebar-sublink"><span class="material-symbols-outlined" aria-hidden="true">description</span><span>Edital</span></a>
           </div>
         </div>
 
@@ -179,31 +140,37 @@
     </aside>
 
     <main class="main-content">
-      <div class="page wide">
-        <form class="card estudo-form" id="estudoForm">
-          <h2 style="margin-top:0;">Estudo de Editais</h2>
-          <p style="margin-top:-8px;color:var(--muted);font-size:13.5px;">Anote aqui a análise de um edital — exigências, riscos, pontos de atenção — pra consultar depois na hora de montar a proposta.</p>
-
+    <div class="page">
+      <form class="card" id="cadastroForm" autocomplete="off">
+        <h2>Cadastrar usuário</h2>
+        <div class="form-row">
           <div class="field">
-            <label for="estudoReferencia">Referência (pregão, UASG ou o que preferir)</label>
-            <input type="text" id="estudoReferencia" class="text-input" placeholder="Ex.: Pregão 90001/2026 — UASG 925010" autocomplete="off" required>
+            <label for="email">E-mail</label>
+            <input type="email" id="email" class="text-input" placeholder="nome@empresa.com.br" required>
           </div>
-
           <div class="field">
-            <label for="estudoAnotacoes">Anotações do estudo</label>
-            <textarea id="estudoAnotacoes" class="text-input" placeholder="Ex.: exige atestado de capacidade técnica, prazo de entrega apertado, habilitação exige..." required></textarea>
+            <label for="senha">Senha inicial</label>
+            <input type="password" id="senha" class="text-input" placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password" required>
           </div>
+          <button class="primary-btn" type="submit" id="cadastrarBtn">
+            <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
+            Cadastrar
+          </button>
+        </div>
+        <div class="status-msg" id="cadastroMsg" role="status" aria-live="polite">O novo usuário entra com o e-mail e a senha informados aqui.</div>
+      </form>
 
-          <div class="estudo-form-actions">
-            <button type="submit" class="btn-primary">
-              <span class="material-symbols-outlined" aria-hidden="true">save</span>
-              Salvar estudo
-            </button>
-          </div>
-        </form>
-
-        <div class="estudos-lista" id="estudosLista"></div>
-      </div>
+      <section class="card">
+        <h2>Usuários com acesso</h2>
+        <div class="status-msg" id="listaMsg" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span>Carregando...</div>
+        <table class="user-table" id="userTable" hidden>
+          <thead>
+            <tr><th>E-mail</th><th>Perfil</th><th>Cadastrado em</th></tr>
+          </thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </section>
+    </div>
     </main>
   </div>
 
@@ -222,21 +189,22 @@
     });
 
     const root = document.documentElement;
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const themeLabel = document.getElementById('themeLabel');
+    const toggle = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
 
     function applyTheme(theme) {
       root.setAttribute('data-theme', theme);
-      themeIcon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
-      themeLabel.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
+      icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+      label.textContent = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
       localStorage.setItem('radar-theme', theme);
     }
 
-    const savedTheme = localStorage.getItem('radar-theme');
-    applyTheme(savedTheme || 'light');
+    const saved = localStorage.getItem('radar-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved || (prefersDark ? 'dark' : 'light'));
 
-    themeToggle.addEventListener('click', () => {
+    toggle.addEventListener('click', () => {
       const current = root.getAttribute('data-theme');
       applyTheme(current === 'dark' ? 'light' : 'dark');
     });
@@ -280,87 +248,82 @@
       });
     });
 
-    // Estudos ficam só no navegador (localStorage) — é uma anotação pessoal de
-    // apoio, não precisa de backend nem é compartilhada entre usuários.
-    const CHAVE_ESTUDOS = 'radar-estudos-editais';
-
-    function carregarEstudos() {
-      try {
-        return JSON.parse(localStorage.getItem(CHAVE_ESTUDOS) || '[]');
-      } catch {
-        return [];
-      }
-    }
-
-    function salvarEstudos(estudos) {
-      localStorage.setItem(CHAVE_ESTUDOS, JSON.stringify(estudos));
-    }
+    const listaMsg = document.getElementById('listaMsg');
+    const userTable = document.getElementById('userTable');
+    const userRows = document.getElementById('userRows');
+    const form = document.getElementById('cadastroForm');
+    const cadastroMsg = document.getElementById('cadastroMsg');
+    const cadastrarBtn = document.getElementById('cadastrarBtn');
 
     function formatarData(iso) {
       return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     }
 
-    const estudosListaEl = document.getElementById('estudosLista');
-
-    function renderEstudos() {
-      const estudos = carregarEstudos().sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
-
-      if (estudos.length === 0) {
-        estudosListaEl.innerHTML = '<p class="empty-msg">Nenhum estudo salvo ainda.</p>';
-        return;
-      }
-
-      estudosListaEl.innerHTML = estudos
-        .map(
-          (estudo) => `
-            <div class="estudo-card" data-id="${estudo.id}">
-              <div class="estudo-card__top">
-                <span class="estudo-card__referencia">${estudo.referencia}</span>
-                <span class="estudo-card__data">${formatarData(estudo.criadoEm)}</span>
-              </div>
-              <p class="estudo-card__anotacoes">${estudo.anotacoes}</p>
-              <div class="estudo-card__acoes">
-                <button type="button" class="excluir" data-id="${estudo.id}">Excluir</button>
-              </div>
-            </div>
-          `
-        )
-        .join('');
-
-      estudosListaEl.querySelectorAll('.excluir').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          if (!confirm('Excluir este estudo?')) return;
-          const restantes = carregarEstudos().filter((e) => e.id !== btn.dataset.id);
-          salvarEstudos(restantes);
-          renderEstudos();
-        });
+    function renderUsuarios(usuarios) {
+      userRows.innerHTML = '';
+      usuarios.forEach((u) => {
+        const tr = document.createElement('tr');
+        const tdEmail = document.createElement('td');
+        tdEmail.className = 'email';
+        tdEmail.textContent = u.email;
+        const tdPerfil = document.createElement('td');
+        tdPerfil.innerHTML = u.admin ? '<span class="badge">Administrador</span>' : 'Usuário';
+        const tdData = document.createElement('td');
+        tdData.textContent = formatarData(u.criado_em);
+        tr.append(tdEmail, tdPerfil, tdData);
+        userRows.appendChild(tr);
       });
+      listaMsg.hidden = true;
+      userTable.hidden = false;
     }
 
-    document.getElementById('estudoForm').addEventListener('submit', (e) => {
+    async function carregarUsuarios() {
+      try {
+        const resp = await fetch('/api/usuarios');
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar usuários.');
+        renderUsuarios(dados.usuarios);
+      } catch (err) {
+        listaMsg.classList.add('error');
+        listaMsg.textContent = err.message;
+        if (err.message.includes('administradores')) {
+          form.querySelectorAll('input, button').forEach((el) => { el.disabled = true; });
+          cadastroMsg.classList.add('error');
+          cadastroMsg.textContent = 'Somente administradores podem cadastrar usuários.';
+        }
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const referenciaInput = document.getElementById('estudoReferencia');
-      const anotacoesInput = document.getElementById('estudoAnotacoes');
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
 
-      const referencia = referenciaInput.value.trim();
-      const anotacoes = anotacoesInput.value.trim();
-      if (!referencia || !anotacoes) return;
+      cadastroMsg.classList.remove('error', 'success');
+      cadastroMsg.innerHTML = '<span class="spinner" aria-hidden="true"></span>Cadastrando...';
+      cadastrarBtn.disabled = true;
 
-      const estudos = carregarEstudos();
-      estudos.push({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        referencia,
-        anotacoes,
-        criadoEm: new Date().toISOString(),
-      });
-      salvarEstudos(estudos);
-
-      referenciaInput.value = '';
-      anotacoesInput.value = '';
-      renderEstudos();
+      try {
+        const resp = await fetch('/api/usuarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao cadastrar.');
+        cadastroMsg.classList.add('success');
+        cadastroMsg.textContent = `Usuário ${dados.usuario.email} cadastrado ✓`;
+        form.reset();
+        carregarUsuarios();
+      } catch (err) {
+        cadastroMsg.classList.add('error');
+        cadastroMsg.textContent = err.message;
+      } finally {
+        cadastrarBtn.disabled = false;
+      }
     });
 
-    renderEstudos();
+    carregarUsuarios();
   </script>
 </body>
 </html>

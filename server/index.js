@@ -116,6 +116,27 @@ function mapearLicitacao(row) {
   };
 }
 
+// Administradores sao definidos por e-mail na variavel ADMIN_EMAILS (separados por virgula),
+// sem coluna no banco: assim nenhum usuario consegue se promover pela propria aplicacao.
+const ADMIN_EMAILS = new Set(
+  String(process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+function ehAdmin(email) {
+  return ADMIN_EMAILS.has(String(email || '').toLowerCase());
+}
+
+function exigirAdmin(req, res, next) {
+  if (req.session && ehAdmin(req.session.usuarioEmail)) return next();
+  return res.status(403).json({ erro: 'Acesso restrito a administradores.' });
+}
+
+const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TAMANHO_MINIMO_SENHA = 6;
+
 function exigirLogin(req, res, next) {
   if (ROTAS_PUBLICAS.has(req.path)) return next();
   
@@ -242,12 +263,72 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', (req, res) => {
   if (req.session && req.session.usuarioId) {
-    return res.json({ autenticado: true, email: req.session.usuarioEmail });
+    return res.json({
+      autenticado: true,
+      email: req.session.usuarioEmail,
+      admin: ehAdmin(req.session.usuarioEmail),
+    });
   }
   res.status(401).json({ autenticado: false });
 });
 
 app.use(exigirLogin);
+
+// Paginas de administracao: quem nao e admin volta para a tela inicial. Fica antes do
+// express.static para que o HTML nao seja servido direto.
+const PAGINAS_ADMIN = new Set(['/usuarios.html', '/painel-local.html']);
+app.use((req, res, next) => {
+  if (!PAGINAS_ADMIN.has(req.path) || ehAdmin(req.session.usuarioEmail)) return next();
+  return res.redirect('/index.html');
+});
+
+// Controle do robo local (Painel Local) e restrito a administradores.
+app.use('/api/robo', exigirAdmin);
+
+app.get('/api/usuarios', exigirAdmin, async (req, res) => {
+  try {
+    const { data, error } = await getSupabase()
+      .from('usuarios')
+      .select('id, email, criado_em')
+      .order('criado_em');
+    if (error) throw error;
+    res.json({ usuarios: data.map((u) => ({ ...u, admin: ehAdmin(u.email) })) });
+  } catch (erro) {
+    console.error('Erro ao listar usuarios:', erro.message);
+    res.status(500).json({ erro: 'Não foi possível listar os usuários.' });
+  }
+});
+
+app.post('/api/usuarios', exigirAdmin, async (req, res) => {
+  const email = String((req.body || {}).email || '').trim().toLowerCase();
+  const senha = String((req.body || {}).senha || '');
+
+  if (!REGEX_EMAIL.test(email)) {
+    return res.status(400).json({ erro: 'Informe um e-mail válido.' });
+  }
+  if (senha.length < TAMANHO_MINIMO_SENHA) {
+    return res.status(400).json({ erro: `A senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.` });
+  }
+
+  try {
+    const senha_hash = await bcrypt.hash(senha, 10);
+    const { data, error } = await getSupabase()
+      .from('usuarios')
+      .insert({ email, senha_hash })
+      .select('id, email, criado_em')
+      .single();
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ erro: 'Já existe um usuário com esse e-mail.' });
+      }
+      throw error;
+    }
+    res.status(201).json({ usuario: { ...data, admin: ehAdmin(data.email) } });
+  } catch (erro) {
+    console.error('Erro ao cadastrar usuario:', erro.message);
+    res.status(500).json({ erro: 'Não foi possível cadastrar o usuário.' });
+  }
+});
 app.use(express.static(path.join(__dirname, '..')));
 // Nota: a rota /contratacoes (server/src/routes.js) usa Prisma + SQLite local
 // (arquivo dev.db) e não está ligada a nenhuma tela do produto — é sobra de um

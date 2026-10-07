@@ -249,3 +249,33 @@
     aoReceberAlerta: (cb) => ouvintes.add(cb),
   };
 })();
+
+// Secao "Administrador" no menu lateral (usuarios.html e painel-local.html): so aparece para
+// administradores. O servidor tambem bloqueia essas paginas e suas APIs para quem nao e admin,
+// isto aqui e so para nao mostrar o atalho.
+(function () {
+  const nav = document.querySelector('.sidebar-nav');
+  if (!nav || nav.querySelector('a[href="usuarios.html"]')) return;
+  fetch('/api/me')
+    .then((resp) => (resp.ok ? resp.json() : null))
+    .then((me) => {
+      if (!me || !me.admin) return;
+      const secao = document.createElement('div');
+      secao.className = 'sidebar-section-label';
+      secao.textContent = 'Administrador';
+      nav.appendChild(secao);
+
+      [
+        { href: 'usuarios.html', icone: 'group', texto: 'Cadastrar usuários' },
+        { href: 'painel-local.html', icone: 'terminal', texto: 'Painel Local' },
+      ].forEach(({ href, icone, texto }) => {
+        const link = document.createElement('a');
+        link.href = href;
+        link.className = 'sidebar-link';
+        if (location.pathname.endsWith('/' + href)) link.classList.add('active');
+        link.innerHTML = `<span class="material-symbols-outlined" aria-hidden="true">${icone}</span><span>${texto}</span>`;
+        nav.appendChild(link);
+      });
+    })
+    .catch(() => {});
+})();
