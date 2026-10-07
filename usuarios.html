@@ -83,6 +83,20 @@
   .user-table tr:last-child td { border-bottom: none; }
   .user-table td.email { word-break: break-all; }
 
+  .perfil-select {
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .perfil-select:disabled { opacity: 0.65; cursor: default; }
+
   @media (max-width: 560px) {
     .form-row { flex-direction: column; align-items: stretch; }
     .field { flex: none; }
@@ -153,6 +167,7 @@
           </thead>
           <tbody id="userRows"></tbody>
         </table>
+        <div class="status-msg" id="perfilMsg" role="status" aria-live="polite"></div>
       </section>
     </div>
     </main>
@@ -238,20 +253,66 @@
     const form = document.getElementById('cadastroForm');
     const cadastroMsg = document.getElementById('cadastroMsg');
     const cadastrarBtn = document.getElementById('cadastrarBtn');
+    const perfilMsg = document.getElementById('perfilMsg');
 
     function formatarData(iso) {
       return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     }
 
-    function renderUsuarios(usuarios) {
+    function avisarPerfil(texto, tipo) {
+      perfilMsg.classList.remove('error', 'success');
+      if (tipo) perfilMsg.classList.add(tipo);
+      perfilMsg.textContent = texto;
+    }
+
+    async function alterarPerfil(usuario, select) {
+      const admin = select.value === 'admin';
+      select.disabled = true;
+      avisarPerfil('Salvando perfil...');
+      try {
+        const resp = await fetch(`/api/usuarios/${encodeURIComponent(usuario.id)}/perfil`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ admin }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || 'Falha ao alterar perfil.');
+        usuario.admin = dados.usuario.admin;
+        avisarPerfil(`${usuario.email} agora é ${usuario.admin ? 'Administrador' : 'Usuário'} ✓`, 'success');
+      } catch (err) {
+        select.value = usuario.admin ? 'admin' : 'usuario';
+        avisarPerfil(err.message, 'error');
+      } finally {
+        select.disabled = false;
+      }
+    }
+
+    function celulaPerfil(u, perfilDisponivel) {
+      const td = document.createElement('td');
+      if (u.adminFixo) {
+        td.innerHTML = '<span class="badge" title="Definido em ADMIN_EMAILS, não pode ser alterado pela tela">Administrador (fixo)</span>';
+      } else if (perfilDisponivel) {
+        const select = document.createElement('select');
+        select.className = 'perfil-select';
+        select.setAttribute('aria-label', `Perfil de ${u.email}`);
+        select.innerHTML = '<option value="usuario">Usuário</option><option value="admin">Administrador</option>';
+        select.value = u.admin ? 'admin' : 'usuario';
+        select.addEventListener('change', () => alterarPerfil(u, select));
+        td.appendChild(select);
+      } else {
+        td.textContent = u.admin ? 'Administrador' : 'Usuário';
+      }
+      return td;
+    }
+
+    function renderUsuarios(usuarios, perfilDisponivel) {
       userRows.innerHTML = '';
       usuarios.forEach((u) => {
         const tr = document.createElement('tr');
         const tdEmail = document.createElement('td');
         tdEmail.className = 'email';
         tdEmail.textContent = u.email;
-        const tdPerfil = document.createElement('td');
-        tdPerfil.innerHTML = u.admin ? '<span class="badge">Administrador</span>' : 'Usuário';
+        const tdPerfil = celulaPerfil(u, perfilDisponivel);
         const tdData = document.createElement('td');
         tdData.textContent = formatarData(u.criado_em);
         tr.append(tdEmail, tdPerfil, tdData);
@@ -259,6 +320,9 @@
       });
       listaMsg.hidden = true;
       userTable.hidden = false;
+      if (!perfilDisponivel) {
+        avisarPerfil('A troca de perfil ainda não está ativa: falta criar a coluna "admin" no Supabase (arquivo server/supabase-schema-usuarios-perfil.sql).', 'error');
+      }
     }
 
     async function carregarUsuarios() {
@@ -266,7 +330,7 @@
         const resp = await fetch('/api/usuarios');
         const dados = await resp.json();
         if (!resp.ok) throw new Error(dados.erro || 'Falha ao carregar usuários.');
-        renderUsuarios(dados.usuarios);
+        renderUsuarios(dados.usuarios, dados.perfilDisponivel);
       } catch (err) {
         listaMsg.classList.add('error');
         listaMsg.textContent = err.message;

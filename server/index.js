@@ -116,8 +116,10 @@ function mapearLicitacao(row) {
   };
 }
 
-// Administradores sao definidos por e-mail na variavel ADMIN_EMAILS (separados por virgula),
-// sem coluna no banco: assim nenhum usuario consegue se promover pela propria aplicacao.
+// Perfil de administrador vem de dois lugares:
+// - ADMIN_EMAILS (variavel de ambiente, separados por virgula): administradores fixos, que nao
+//   podem ser rebaixados pela tela - garante que o dono nunca perca o acesso;
+// - coluna usuarios.admin: perfil alterado pela tela de usuarios (ver supabase-schema-usuarios-perfil.sql).
 const ADMIN_EMAILS = new Set(
   String(process.env.ADMIN_EMAILS || '')
     .split(',')
@@ -125,12 +127,39 @@ const ADMIN_EMAILS = new Set(
     .filter(Boolean)
 );
 
-function ehAdmin(email) {
+// Erros de "coluna nao existe" (Postgres 42703 na leitura, PostgREST PGRST204 na escrita):
+// a coluna admin ainda nao foi criada no Supabase.
+function colunaAdminInexistente(error) {
+  return !!error && (error.code === '42703' || error.code === 'PGRST204');
+}
+
+function ehAdminFixo(email) {
   return ADMIN_EMAILS.has(String(email || '').toLowerCase());
 }
 
-function exigirAdmin(req, res, next) {
-  if (req.session && ehAdmin(req.session.usuarioEmail)) return next();
+// Consulta o banco a cada requisicao (em vez de guardar na sessao) para que uma mudanca de
+// perfil valha na hora, sem o usuario precisar sair e entrar de novo.
+async function ehAdmin(session) {
+  if (!session || !session.usuarioId) return false;
+  if (ehAdminFixo(session.usuarioEmail)) return true;
+  const { data, error } = await getSupabase()
+    .from('usuarios')
+    .select('admin')
+    .eq('id', session.usuarioId)
+    .maybeSingle();
+  if (error) {
+    if (!colunaAdminInexistente(error)) console.error('Erro ao verificar perfil:', error.message);
+    return false;
+  }
+  return !!(data && data.admin);
+}
+
+async function exigirAdmin(req, res, next) {
+  try {
+    if (await ehAdmin(req.session)) return next();
+  } catch (erro) {
+    console.error('Erro ao verificar perfil:', erro.message);
+  }
   return res.status(403).json({ erro: 'Acesso restrito a administradores.' });
 }
 
@@ -261,12 +290,12 @@ app.post('/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
   if (req.session && req.session.usuarioId) {
     return res.json({
       autenticado: true,
       email: req.session.usuarioEmail,
-      admin: ehAdmin(req.session.usuarioEmail),
+      admin: await ehAdmin(req.session).catch(() => false),
     });
   }
   res.status(401).json({ autenticado: false });
@@ -277,22 +306,35 @@ app.use(exigirLogin);
 // Paginas de administracao: quem nao e admin volta para a tela inicial. Fica antes do
 // express.static para que o HTML nao seja servido direto.
 const PAGINAS_ADMIN = new Set(['/usuarios.html', '/painel-local.html']);
-app.use((req, res, next) => {
-  if (!PAGINAS_ADMIN.has(req.path) || ehAdmin(req.session.usuarioEmail)) return next();
+app.use(async (req, res, next) => {
+  if (!PAGINAS_ADMIN.has(req.path)) return next();
+  if (await ehAdmin(req.session).catch(() => false)) return next();
   return res.redirect('/index.html');
 });
 
 // Controle do robo local (Painel Local) e restrito a administradores.
 app.use('/api/robo', exigirAdmin);
 
+function formatarUsuario(u) {
+  const fixo = ehAdminFixo(u.email);
+  return { id: u.id, email: u.email, criado_em: u.criado_em, admin: fixo || !!u.admin, adminFixo: fixo };
+}
+
 app.get('/api/usuarios', exigirAdmin, async (req, res) => {
   try {
-    const { data, error } = await getSupabase()
+    const supabase = getSupabase();
+    let { data, error } = await supabase
       .from('usuarios')
-      .select('id, email, criado_em')
+      .select('id, email, criado_em, admin')
       .order('criado_em');
+    // Enquanto a coluna admin nao existir, lista sem ela (so os administradores fixos aparecem
+    // como admin) e avisa a tela que a troca de perfil ainda nao esta disponivel.
+    const perfilDisponivel = !colunaAdminInexistente(error);
+    if (!perfilDisponivel) {
+      ({ data, error } = await supabase.from('usuarios').select('id, email, criado_em').order('criado_em'));
+    }
     if (error) throw error;
-    res.json({ usuarios: data.map((u) => ({ ...u, admin: ehAdmin(u.email) })) });
+    res.json({ usuarios: data.map(formatarUsuario), perfilDisponivel });
   } catch (erro) {
     console.error('Erro ao listar usuarios:', erro.message);
     res.status(500).json({ erro: 'Não foi possível listar os usuários.' });
@@ -323,10 +365,52 @@ app.post('/api/usuarios', exigirAdmin, async (req, res) => {
       }
       throw error;
     }
-    res.status(201).json({ usuario: { ...data, admin: ehAdmin(data.email) } });
+    res.status(201).json({ usuario: formatarUsuario(data) });
   } catch (erro) {
     console.error('Erro ao cadastrar usuario:', erro.message);
     res.status(500).json({ erro: 'Não foi possível cadastrar o usuário.' });
+  }
+});
+
+app.patch('/api/usuarios/:id/perfil', exigirAdmin, async (req, res) => {
+  const { id } = req.params;
+  const admin = (req.body || {}).admin;
+  if (typeof admin !== 'boolean') {
+    return res.status(400).json({ erro: 'Informe o perfil (admin: true ou false).' });
+  }
+  if (id === req.session.usuarioId && !admin) {
+    return res.status(400).json({ erro: 'Você não pode tirar o seu próprio perfil de administrador.' });
+  }
+
+  try {
+    const supabase = getSupabase();
+    const { data: alvo, error: erroBusca } = await supabase
+      .from('usuarios')
+      .select('email')
+      .eq('id', id)
+      .maybeSingle();
+    if (erroBusca) throw erroBusca;
+    if (!alvo) return res.status(404).json({ erro: 'Usuário não encontrado.' });
+    if (ehAdminFixo(alvo.email)) {
+      return res.status(400).json({ erro: 'Este administrador é fixo (ADMIN_EMAILS) e não pode ter o perfil alterado.' });
+    }
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update({ admin })
+      .eq('id', id)
+      .select('id, email, criado_em, admin')
+      .single();
+    if (error) {
+      if (colunaAdminInexistente(error)) {
+        return res.status(503).json({ erro: 'Troca de perfil indisponível: falta criar a coluna admin no Supabase.' });
+      }
+      throw error;
+    }
+    res.json({ usuario: formatarUsuario(data) });
+  } catch (erro) {
+    console.error('Erro ao alterar perfil:', erro.message);
+    res.status(500).json({ erro: 'Não foi possível alterar o perfil.' });
   }
 });
 app.use(express.static(path.join(__dirname, '..')));
