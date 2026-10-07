@@ -48,3 +48,10 @@ gcm-diagnose.log
 .bot_watchdog_estado.json
 .vercel
 .env*
+
+# Arquivos gerados pelo robo/servidor em execucao (mudam a cada rodada)
+__pycache__/
+*.pyc
+*.log
+estado_execucao.json
+falhas_execucao.json
